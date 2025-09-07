@@ -4,3 +4,4 @@ node_modules
 .DS_Store
 note.txt
 quota-sample.csv
+.vercel
