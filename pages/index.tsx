@@ -7,10 +7,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [sortKey, setSortKey] = useState<string>('quota')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [fundCompanies, setFundCompanies] = useState<string[]>([]) // State to store unique fund companies
+
+  const companyList = ["易方达", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "汇天富", "华泰柏瑞", "南方", "万家", "广发", "华安", "招商", "海富通"]
 
   // Fetch all data on mount
   useEffect(() => {
     fetchData()
+    setFundCompanies(companyList) // Set companies directly from the list
     // eslint-disable-next-line
   }, [])
 
@@ -30,8 +34,8 @@ export default function Home() {
       let aVal = a[key]
       let bVal = b[key]
       if (key === 'quota') {
-        aVal = a.quota * (a.currency === 'RMB' ? 1 : 7)
-        bVal = b.quota * (b.currency === 'RMB' ? 1 : 7)
+        aVal = a.quota * (a.currency === 'CNY' ? 1 : 7)
+        bVal = b.quota * (b.currency === 'CNY' ? 1 : 7)
       }
       if (typeof aVal === 'string') {
         return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
@@ -48,6 +52,11 @@ export default function Home() {
   }
 
   const handleSearch = () => fetchData()
+
+  const openPdf = (pdfId: number) => {
+    const url = `http://eid.csrc.gov.cn/fund/disclose/instance_show_pdf_id.do?instanceid=${pdfId}`
+    window.open(url, '_blank', 'noopener,noreferrer') // Open the PDF in a new tab
+  }
 
   return (
     <>
@@ -66,18 +75,27 @@ export default function Home() {
             <p className="text-gray-600 text-lg">快速查询各QDII基金额度，支持多条件筛选</p>
           </div>
           <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 flex flex-col md:flex-row gap-4 items-center">
-            <input
+            <select
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
-              placeholder="基金公司"
               value={filters.fund_company}
               onChange={e => setFilters(f => ({ ...f, fund_company: e.target.value }))}
-            />
-            <input
+            >
+              <option value="">基金公司</option>
+              {fundCompanies.map((company, index) => (
+                <option key={index} value={company}>
+                  {company}
+                </option>
+              ))}
+            </select>
+            <select
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
-              placeholder="基金名称"
               value={filters.fund_name}
               onChange={e => setFilters(f => ({ ...f, fund_name: e.target.value }))}
-            />
+            >
+              <option value="">基金名称</option>
+              <option value="纳斯达克100ETF">纳斯达克100ETF</option>
+              <option value="标普500ETF">标普500ETF</option>
+            </select>
             <input
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
               placeholder="基金代码"
@@ -117,16 +135,17 @@ export default function Home() {
                   <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('otc')}>
                     OTC {sortKey === 'otc' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
+                  <th className="p-3 font-semibold text-left">公告</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-indigo-400">加载中...</td>
+                    <td colSpan={8} className="text-center py-8 text-indigo-400">加载中...</td>
                   </tr>
                 ) : data.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-400">暂无数据</td>
+                    <td colSpan={8} className="text-center py-8 text-gray-400">暂无数据</td>
                   </tr>
                 ) : (
                   data.map((row, i) => (
@@ -138,14 +157,24 @@ export default function Home() {
                       <td className="p-3 border-b border-gray-100 text-left">{row.quota.toLocaleString()}</td>
                       <td className="p-3 border-b border-gray-100 text-left">{row.currency}</td>
                       <td className="p-3 border-b border-gray-100 text-left">{row.otc}</td>
+                      <td className="p-3 border-b border-gray-100 text-left">
+                        <button
+                          className="text-blue-600 hover:underline"
+                          onClick={() => openPdf(row.pdf_id)}
+                        >
+                          📄
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-          <div className="mt-6 text-center text-gray-400 text-xs">
+          <div className="mt-6 text-left text-gray-400 text-xs">
             <p>额度排序按人民币等值计算，人民币汇率为1，美元汇率为7。</p>
+            <p>除非于份额类别中额外注明，USD指现汇。</p>
+            <p>基金公司直销额度往往高于第三方渠道额度。第三方渠道一般只展示渠道额度。</p>
             <p>数据来源：基金公司公告。</p>
           </div>
         </div>
@@ -153,4 +182,3 @@ export default function Home() {
     </>
   )
 }
-
