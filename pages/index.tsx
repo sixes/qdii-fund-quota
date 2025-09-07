@@ -9,7 +9,7 @@ export default function Home() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [fundCompanies, setFundCompanies] = useState<string[]>([]) // State to store unique fund companies
 
-  const companyList = ["易方达", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "汇天富", "华泰柏瑞", "南方", "万家", "广发", "华安", "招商", "海富通"]
+  const companyList = ["易方达", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'))
 
   // Fetch all data on mount
   useEffect(() => {
@@ -53,6 +53,12 @@ export default function Home() {
 
   const handleSearch = () => fetchData()
 
+  const resetFilters = () => {
+    const clearedFilters = { fund_company: '', fund_name: '', fund_code: '' }
+    setFilters(clearedFilters)
+    fetchData(clearedFilters) // Pass cleared filters directly to fetchData
+  }
+
   const openPdf = (pdfId: number) => {
     const url = `http://eid.csrc.gov.cn/fund/disclose/instance_show_pdf_id.do?instanceid=${pdfId}`
     window.open(url, '_blank', 'noopener,noreferrer') // Open the PDF in a new tab
@@ -61,9 +67,9 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>QDII基金额度查询</title>
-        <meta name="description" content="快速查询各QDII基金额度，支持多条件筛选." />
-        <meta name="keywords" content="QDII基金, 额度查询, 纳斯达克指数，标普指数" />
+        <title>QDII基金申购额度查询</title>
+        <meta name="description" content="快速查询QDII基金申购额度，支持多条件筛选." />
+        <meta name="keywords" content="QDII基金, 申购额度查询, 纳斯达克指数，标普指数, 纳指额度, 标普额度" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
         <link rel="icon" href="/favicon.ico" />
@@ -78,7 +84,11 @@ export default function Home() {
             <select
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
               value={filters.fund_company}
-              onChange={e => setFilters(f => ({ ...f, fund_company: e.target.value }))}
+              onChange={e => {
+                const newFilters = { ...filters, fund_company: e.target.value }
+                setFilters(newFilters)
+                fetchData(newFilters)
+              }}
             >
               <option value="">基金公司</option>
               {fundCompanies.map((company, index) => (
@@ -90,11 +100,15 @@ export default function Home() {
             <select
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
               value={filters.fund_name}
-              onChange={e => setFilters(f => ({ ...f, fund_name: e.target.value }))}
+              onChange={e => {
+                const newFilters = { ...filters, fund_name: e.target.value }
+                setFilters(newFilters)
+                fetchData(newFilters)
+              }}
             >
               <option value="">基金名称</option>
-              <option value="纳斯达克100ETF">纳斯达克100ETF</option>
               <option value="标普500ETF">标普500ETF</option>
+              <option value="纳斯达克100ETF">纳斯达克100ETF</option>
             </select>
             <input
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
@@ -108,6 +122,12 @@ export default function Home() {
               disabled={loading}
             >
               {loading ? '查询中...' : '查询'}
+            </button>
+            <button
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition"
+              onClick={resetFilters}
+            >
+              重置
             </button>
           </div>
           <div className="overflow-x-auto rounded-xl shadow-lg bg-white/90">

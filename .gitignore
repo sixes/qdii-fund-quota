@@ -5,3 +5,6 @@ node_modules
 note.txt
 quota-sample.csv
 .vercel
+fund-companies.txt
+fund_quota.csv
+quota.json
