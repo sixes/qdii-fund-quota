@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
+import { useForm } from '@formspree/react'
 
 export default function Home() {
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '', fund_code: '' })
@@ -8,6 +9,8 @@ export default function Home() {
   const [sortKey, setSortKey] = useState<string>('quota')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [fundCompanies, setFundCompanies] = useState<string[]>([]) // State to store unique fund companies
+  const [state, handleSubmit] = useForm("xyzdlpln")
+  const [message, setMessage] = useState('')
 
   const companyList = ["易方达", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'))
 
@@ -62,6 +65,19 @@ export default function Home() {
   const openPdf = (pdfId: number) => {
     const url = `http://eid.csrc.gov.cn/fund/disclose/instance_show_pdf_id.do?instanceid=${pdfId}`
     window.open(url, '_blank', 'noopener,noreferrer') // Open the PDF in a new tab
+  }
+
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    if (!email.trim()) {
+      const confirmed = window.confirm('您未提供邮箱，我们无法回复您的留言。确定要继续提交吗？')
+      if (!confirmed) {
+        e.preventDefault()
+        return
+      }
+    }
+    handleSubmit(e)
   }
 
   return (
@@ -138,7 +154,7 @@ export default function Home() {
                     基金公司 {sortKey === 'fund_company' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('fund_name')}>
-                    基金名称 {sortKey === 'fund_name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    基金简称 {sortKey === 'fund_name' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('share_class')}>
                     份额类别 {sortKey === 'share_class' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -191,8 +207,60 @@ export default function Home() {
               </tbody>
             </table>
           </div>
+          <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">
+            <h2 className="text-xl font-semibold text-indigo-700 mb-4">留言反馈</h2>
+            <p className="text-gray-600 mb-4">有任何问题或建议，请留下您的信息。我们会尽快回复。</p>
+            {state.succeeded && (
+              <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-lg">
+                感谢您的留言！我们会尽快回复。
+              </div>
+            )}
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">姓名</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    className="mt-1 block w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg transition"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">邮箱</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    className="mt-1 block w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg transition"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+                  留言 <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  required
+                  rows={2}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="mt-1 block w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg transition"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={state.submitting || !message.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-50"
+              >
+                {state.submitting ? '发送中...' : '发送留言'}
+              </button>
+            </form>
+          </div>
           <div className="mt-6 text-left text-gray-400 text-xs">
-            <p>额度排序按人民币等值计算，人民币汇率为1，美元汇率为7。</p>
+            <p>额度排序按人民币等值计算，美元汇率为7。</p>
             <p>除非于份额类别中额外注明，USD指现汇。</p>
             <p>基金公司直销额度往往高于第三方渠道额度。第三方渠道一般只展示渠道额度。</p>
             <p>数据来源：基金公司公告。</p>
