@@ -3,7 +3,7 @@ import Head from 'next/head'
 import { useForm } from '@formspree/react'
 
 export default function Home() {
-  const [filters, setFilters] = useState({ fund_company: '', fund_name: '', fund_code: '' })
+  const [filters, setFilters] = useState({ fund_company: '', fund_name: '', fund_code: '', country: '' })
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [sortKey, setSortKey] = useState<string>('quota')
@@ -12,7 +12,7 @@ export default function Home() {
   const [state, handleSubmit] = useForm("xyzdlpln")
   const [message, setMessage] = useState('')
 
-  const companyList = ["易方达", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'))
+  const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'))
 
   // Fetch all data on mount
   useEffect(() => {
@@ -57,13 +57,13 @@ export default function Home() {
   const handleSearch = () => fetchData()
 
   const resetFilters = () => {
-    const clearedFilters = { fund_company: '', fund_name: '', fund_code: '' }
+    const clearedFilters = { fund_company: '', fund_name: '', fund_code: '', country: '' }
     setFilters(clearedFilters)
     fetchData(clearedFilters) // Pass cleared filters directly to fetchData
   }
 
   const openPdf = (pdfId: number) => {
-    const url = `http://eid.csrc.gov.cn/fund/disclose/instance_show_pdf_id.do?instanceid=${pdfId}`
+    const url = `http://eid.csrc.gov.cn/fund/disclose/instance_html_view.do?instanceid=${pdfId}`
     window.open(url, '_blank', 'noopener,noreferrer') // Open the PDF in a new tab
   }
 
@@ -113,18 +113,49 @@ export default function Home() {
                 </option>
               ))}
             </select>
-            <select
+            <input
+              list="fund-names"
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
+              placeholder="基金名称"
               value={filters.fund_name}
               onChange={e => {
                 const newFilters = { ...filters, fund_name: e.target.value }
                 setFilters(newFilters)
                 fetchData(newFilters)
               }}
+            />
+            <datalist id="fund-names">
+              <option value="标普" />
+              <option value="标普500ETF" />
+              <option value="道琼斯" />
+              <option value="精选" />
+              <option value="黄金" />
+              <option value="恒生科技" />
+              <option value="恒生互联网" />
+              <option value="日经" />
+              <option value="纳斯达克100ETF" />
+              <option value="生物科技" />
+              <option value="石油" />
+              <option value="债券" />
+            </datalist>
+            <select
+              className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
+              value={filters.country}
+              onChange={e => {
+                const newFilters = { ...filters, country: e.target.value }
+                setFilters(newFilters)
+                fetchData(newFilters)
+              }}
             >
-              <option value="">基金名称</option>
-              <option value="标普500ETF">标普500ETF</option>
-              <option value="纳斯达克100ETF">纳斯达克100ETF</option>
+              <option value="">国家</option>
+              <option value="法国">法国</option>
+              <option value="美国">美国</option>
+              <option value="欧洲">欧洲</option>
+              <option value="日本">日本</option>
+              <option value="越南">越南</option>
+              <option value="印度">印度</option>
+              <option value="亚洲">亚洲</option>
+              <option value="中国">中国</option>
             </select>
             <input
               className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
@@ -261,7 +292,6 @@ export default function Home() {
           </div>
           <div className="mt-6 text-left text-gray-400 text-xs">
             <p>额度排序按人民币等值计算，美元汇率为7。</p>
-            <p>除非于份额类别中额外注明，USD指现汇。</p>
             <p>基金公司直销额度往往高于第三方渠道额度。第三方渠道一般只展示渠道额度。</p>
             <p>数据来源：基金公司公告。</p>
           </div>

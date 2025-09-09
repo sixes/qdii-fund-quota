@@ -4,17 +4,16 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { fund_company, fund_name, fund_code } = req.query
+  const { fund_company, fund_name, fund_code, country } = req.query
 
-  const where: any = {}
-  if (fund_company) where.fund_company = { contains: fund_company as string }
-  if (fund_name) where.fund_name = { contains: fund_name as string }
-  if (fund_code) where.fund_code = { contains: fund_code as string }
+  const whereParts: string[] = []
+  if (fund_company) whereParts.push(`fund_company LIKE '%${fund_company}%'`)
+  if (fund_name) whereParts.push(`fund_name LIKE '%${fund_name}%'`)
+  if (fund_code) whereParts.push(`fund_code LIKE '%${fund_code}%'`)
+  if (country) whereParts.push(`fund_name LIKE '%${country}%'`)
 
-  const quotas = await prisma.fundQuota.findMany({
-    where,
-    orderBy: { fund_company: 'asc' }
-  })
+  const whereClause = whereParts.length > 0 ? whereParts.join(' AND ') : '1=1'
+  const quotas = await prisma.$queryRawUnsafe(`SELECT * FROM fund_quota WHERE ${whereClause}`)
 
   res.status(200).json(quotas)
 }
