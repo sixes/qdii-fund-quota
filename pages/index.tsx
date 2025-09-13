@@ -4,13 +4,19 @@ import { useForm } from '@formspree/react'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import React from 'react'
+import { Switch } from '@headlessui/react'
 
 export default function Home() {
-  const [filters, setFilters] = useState({ fund_company: '', fund_name: '', fund_code: '', country: '' })
+  const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' })
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [sortKey, setSortKey] = useState<string>('changeFromAthPercent')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [sortKey, setSortKey] = useState<string>('quota')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  // Per-tab stored sort preferences
+  const [fundSortKey, setFundSortKey] = useState<string>('quota')
+  const [fundSortDirection, setFundSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [stockSortKey, setStockSortKey] = useState<string>('changeFromAthPercent')
+  const [stockSortDirection, setStockSortDirection] = useState<'asc' | 'desc'>('asc')
   const [fundCompanies, setFundCompanies] = useState<string[]>([]) // State to store unique fund companies
   const [state, handleSubmit] = useForm("xyzdlpln")
   const [message, setMessage] = useState('')
@@ -35,7 +41,8 @@ export default function Home() {
     Object.entries(customFilters).forEach(([k, v]) => { if (v) params.append(k, v) })
     const res = await fetch('/api/quotas?' + params.toString())
     const fetchedData = await res.json()
-    setData(sortData(fetchedData, 'quota', 'desc'))
+    // sort using stored fund preferences so user sorting is preserved
+    setData(sortData(fetchedData, fundSortKey, fundSortDirection))
     setLoading(false)
   }
 
@@ -57,9 +64,19 @@ export default function Home() {
 
   const handleSort = (key: string) => {
     const newDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc'
+    // store per-tab preference and apply immediately to in-memory data
+    if (activeTab === 'stocks') {
+      setStockSortKey(key)
+      setStockSortDirection(newDirection)
+      setStockData(sortData(stockData, key, newDirection))
+    } else {
+      setFundSortKey(key)
+      setFundSortDirection(newDirection)
+      setData(sortData(data, key, newDirection))
+    }
+    // update global sortKey/sortDirection used for arrow display
     setSortKey(key)
     setSortDirection(newDirection)
-    setData(sortData(data, key, newDirection))
   }
 
   const handleSearch = () => fetchData()
@@ -95,9 +112,9 @@ export default function Home() {
     const fetchedStockData = await res.json()
     let sortedStockData: any[] = []
     if (Array.isArray(fetchedStockData)) {
-      sortedStockData = sortData(fetchedStockData, sortKey, sortDirection)
+      // sort using stored stock preferences so user sorting is preserved
+      sortedStockData = sortData(fetchedStockData, stockSortKey, stockSortDirection)
     } else {
-      // Handle error response
       sortedStockData = []
     }
     setStockData(sortedStockData)
@@ -119,7 +136,9 @@ export default function Home() {
 
   useEffect(() => {
     if (activeTab === 'stocks' && stockData.length > 0) {
-      setStockData(sortData(stockData, sortKey, sortDirection))
+      // do nothing, handled by fetchStockData
+    } else if (activeTab === 'funds' && data.length > 0) {
+      setData(sortData(data, sortKey, sortDirection))
     }
     // eslint-disable-next-line
   }, [sortKey, sortDirection])
@@ -149,6 +168,43 @@ export default function Home() {
       <span className="text-right w-full">{value}</span>
     </div>
   ))
+
+  // Pagination state
+  const [fundsPage, setFundsPage] = useState(1)
+  const [stocksPage, setStocksPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
+  // Reset page when filters or tab change
+  useEffect(() => { setFundsPage(1) }, [filters, activeTab])
+  useEffect(() => { setStocksPage(1) }, [selectedDate, stockMarket, activeTab])
+
+  // Paginated data
+  const pagedFunds = data.slice((fundsPage-1)*ITEMS_PER_PAGE, fundsPage*ITEMS_PER_PAGE)
+  const pagedStocks = filteredStockData.slice((stocksPage-1)*ITEMS_PER_PAGE, stocksPage*ITEMS_PER_PAGE)
+  const fundsTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE)
+  const stocksTotalPages = Math.ceil(filteredStockData.length / ITEMS_PER_PAGE)
+
+  // Helper for pagination page numbers
+  function getPageNumbers(current: number, total: number) {
+    if (total <= 4) return Array.from({length: total}, (_,i) => i+1)
+    if (current <= 2) return [1,2,3,4]
+    if (current >= total-1) return [total-3, total-2, total-1, total]
+    return [current-1, current, current+1, current+2]
+  }
+
+  useEffect(() => {
+    // when switching tabs, restore that tab's last sort and fetch data accordingly
+    if (activeTab === 'funds') {
+      setSortKey(fundSortKey)
+      setSortDirection(fundSortDirection)
+      fetchData()
+    } else if (activeTab === 'stocks') {
+      setSortKey(stockSortKey)
+      setSortDirection(stockSortDirection)
+      fetchStockData()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
 
   return (
     <>
@@ -209,6 +265,7 @@ export default function Home() {
                     setFilters(newFilters)
                     fetchData(newFilters)
                   }}
+                  onFocus={e => e.target.select()}
                 />
                 <datalist id="fund-names">
                   <option value="标普" />
@@ -280,7 +337,7 @@ export default function Home() {
                         基金代码 {sortKey === 'fund_code' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </th>
                       <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('quota')}>
-                        额度 {sortKey === 'quota' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        额度 {(sortKey === 'quota' || (!sortKey && data.length > 0)) ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
                       </th>
                       <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('currency')}>
                         币种 {sortKey === 'currency' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -301,7 +358,7 @@ export default function Home() {
                         <td colSpan={8} className="text-center py-8 text-gray-400">暂无数据</td>
                       </tr>
                     ) : (
-                      data.map((row, i) => (
+                      pagedFunds.map((row, i) => (
                         <tr key={i} className="hover:bg-indigo-50 transition">
                           <td className="p-3 border-b border-gray-100 text-left">{row.fund_company}</td>
                           <td className="p-3 border-b border-gray-100 text-left">{row.fund_name}</td>
@@ -323,28 +380,47 @@ export default function Home() {
                     )}
                   </tbody>
                 </table>
+                {/* Pagination for funds */}
+                {data.length > ITEMS_PER_PAGE && (
+                  <div className="flex justify-center items-center py-4 gap-2">
+                    <button onClick={() => setFundsPage(p => Math.max(1, p-1))} disabled={fundsPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
+                    {fundsTotalPages > 4 && fundsPage > 3 && (
+                      <span className="px-1">...</span>
+                    )}
+                    {getPageNumbers(fundsPage, fundsTotalPages).map(i => (
+                      <button key={i} onClick={()=>setFundsPage(i)} className={`px-2 py-1 rounded ${fundsPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
+                    ))}
+                    {fundsTotalPages > 4 && fundsPage < fundsTotalPages-2 && (
+                      <span className="px-1">...</span>
+                    )}
+                    <button onClick={() => setFundsPage(p => Math.min(fundsTotalPages, p+1))} disabled={fundsPage===fundsTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+                  </div>
+                )}
               </div>
             </>
           )}
           {activeTab === 'stocks' && (
             <>
               <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className={`mr-2 font-semibold ${stockMarket === 'US' ? 'text-indigo-700' : 'text-gray-500'}`}>美股</span>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={stockMarket === 'HK'} onChange={() => setStockMarket(m => m === 'US' ? 'HK' : 'US')} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:bg-indigo-600 transition"></div>
-                    <span className="ml-3 font-semibold text-gray-500">港股</span>
-                  </label>
-                </div>
-                <div className="relative flex items-center justify-end w-40">
+                <div className="flex items-center justify-end w-full gap-2">
+                  <span className={`font-semibold ${stockMarket === 'US' ? 'text-indigo-700' : 'text-gray-500'}`}>美股</span>
+                  <Switch
+                    checked={stockMarket === 'HK'}
+                    onChange={checked => setStockMarket(checked ? 'HK' : 'US')}
+                    className={`${stockMarket === 'HK' ? 'bg-indigo-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors ml-0`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${stockMarket === 'HK' ? 'translate-x-5' : 'translate-x-1'}`}
+                    />
+                  </Switch>
+                  <span className={`ml-0 font-semibold ${stockMarket === 'HK' ? 'text-indigo-700' : 'text-gray-500'}`}>港股</span>
                   <DatePicker
                     selected={selectedDate}
                     onChange={handleDateChange}
                     minDate={minDate}
                     maxDate={maxDate}
-                    dateFormat="yyyy-MM-dd"
-                    className="bg-transparent cursor-pointer text-right w-full pr-7"
+                    dateFormat="MM-dd"
+                    className="bg-transparent cursor-pointer text-right pr-7 ml-0"
                     ref={datePickerRef}
                     calendarClassName="right-0"
                     customInput={<DatePickerCustomInput />}
@@ -355,12 +431,12 @@ export default function Home() {
                 <table className="min-w-full text-sm md:text-base table-auto">
                   <thead>
                     <tr className="bg-indigo-100 text-indigo-800">
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('ticker')}>Ticker {sortKey === 'ticker' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('name')}>Name {sortKey === 'name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('lastClosingPrice')}>Last Closing Price {sortKey === 'lastClosingPrice' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('allTimeHigh')}>All Time High Price {sortKey === 'allTimeHigh' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('lastChangePercent')}>Last Change % {sortKey === 'lastChangePercent' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('changeFromAthPercent')}>Change % from ATH {sortKey === 'changeFromAthPercent' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
+                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('ticker')}>Ticker {sortKey === 'ticker' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('name')}>Name {sortKey === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('lastClosingPrice')}>Last Closing Price {sortKey === 'lastClosingPrice' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('allTimeHigh')}>All Time High Price {sortKey === 'allTimeHigh' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('lastChangePercent')}>Last Change % {sortKey === 'lastChangePercent' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
+                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('changeFromAthPercent')}>Change % from ATH {sortKey === 'changeFromAthPercent' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -373,7 +449,7 @@ export default function Home() {
                         <td colSpan={6} className="text-center py-8 text-gray-400">暂无数据</td>
                       </tr>
                     ) : (
-                      filteredStockData.map((stock, i) => (
+                      pagedStocks.map((stock, i) => (
                         <tr key={i} className="hover:bg-indigo-50 transition">
                           <td className="p-3 border-b border-gray-100 text-left">{stock.ticker}</td>
                           <td className="p-3 border-b border-gray-100 text-left">{stock.name}</td>
@@ -386,6 +462,22 @@ export default function Home() {
                     )}
                   </tbody>
                 </table>
+                {/* Pagination for stocks */}
+                {filteredStockData.length > ITEMS_PER_PAGE && (
+                  <div className="flex justify-center items-center py-4 gap-2">
+                    <button onClick={() => setStocksPage(p => Math.max(1, p-1))} disabled={stocksPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
+                    {stocksTotalPages > 4 && stocksPage > 3 && (
+                      <span className="px-1">...</span>
+                    )}
+                    {getPageNumbers(stocksPage, stocksTotalPages).map(i => (
+                      <button key={i} onClick={()=>setStocksPage(i)} className={`px-2 py-1 rounded ${stocksPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
+                    ))}
+                    {stocksTotalPages > 4 && stocksPage < stocksTotalPages-2 && (
+                      <span className="px-1">...</span>
+                    )}
+                    <button onClick={() => setStocksPage(p => Math.min(stocksTotalPages, p+1))} disabled={stocksPage===stocksTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -402,16 +494,50 @@ export default function Home() {
                 一般可以通过银行APP、第三方基金销售平台或基金公司申购基金，但各渠道展示的数据有限。例如，某只基金有A类和C类份额，A类收取申购费，C类不收取。在银行和第三方平台通常只展示A类，C类则不显示。本网站致力于消除信息差，方便投资者快速找到满足自己申购额度的基金。
               </li>
               <li>
+                <strong>有推荐的交易平台吗？</strong><br />
+                本网站不提供任何交易平台，只提供数据展示。不偏向任何机构。
+              </li>
+              <li>
+                <strong>申购额度是什么？</strong><br />
+                申购额度是指基金公司允许投资者购买该基金的最大金额。额度用完后，可能无法继续申购该基金。
+              </li>
+              <li>
+                <strong>为什么有些基金额度是0？</strong><br />
+                额度为0表示该基金当前无法申购，可能是因为额度已用完或基金公司暂停申购。
+              </li>
+              <li>
+                <strong>为什么没有列出场内ETF？</strong><br />
+                暂时不包含场内ETF，因为场内ETF在二级市场交易，没有申购额度限制。
+              </li>
+              <li>
+                <strong>如何与场内ETF进行套利？</strong><br />
+                场内ETF套利涉及在二级市场买卖ETF份额与在一级市场申购赎回ETF份额之间的价差交易。套利者通过低买高卖获取利润，但需考虑交易费用、税务影响及市场风险。
+                建议有经验的投资者参与，初学者应谨慎。
+              </li>
+              <li>
+                <strong>列出的申购额度一定可以购买吗？</strong><br />
+                不一定。额度是基金公司公布的总额度，实际可申购额度可能因渠道、时间等因素有所不同。建议在申购前通过银行APP或第三方平台确认实际可申购额度。
+                另外，我们发现，某基金公司在公告中列出D类份额及其申购额度，但在银行APP和第三方平台均不显示D类份额，经咨询官方客服，确认D类份额无法申购 :( 
+                因此，建议在申购前务必确认份额类别和额度的有效性。
+              </li>
+              <li>
+                <strong>投资纳斯达克指数或者标普500指数回报有多少？</strong><br />
+根据历史数据（截至2025年9月13日），纳斯达克100指数过去10年年化回报约18.56%，30年约13.44%，波动性较高，适合高风险偏好者。
+标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨19%，标普500涨15%；2025年初至今，分别涨30.12%和24.56%。
+相比之下，香港分红保险IRR约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，
+稳健型选标普500，或混合配置。若遇保险推销，无需焦虑 :)
+              </li>
+              <li>
                 <strong>这些数据来自哪里？可靠吗？</strong><br />
                 数据均来自基金公司发布的官方公告。我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们会力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
               </li>
               <li>
-                <strong>投资纳斯达克指数或者标普500指数回报有多少？</strong><br />
-根据历史数据（截至2025年9月13日），纳斯达克100指数过去10年年化回报约18.56%，30年约13.44%，波动性较高，适合高风险偏好者。标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨19%，标普500涨15%；2025年初至今，分别涨30.12%和24.56%。相比之下，香港分红保险IRR约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，稳健型选标普500，或混合配置。若遇保险推销，无需焦虑，评估条款并对比指数基金回报。
+                <strong>这些数据多久更新一次？</strong><br />
+                QDII基金申购额度每天3:00(北京时间，下同)和18:00更新，MEGA 7+股票数据每天8:30更新。
               </li>
               <li>
-                <strong>这些数据多久更新一次？</strong><br />
-                QDII基金申购额度每天3:00和18:00更新，MEGA 7+股票数据每天8:30更新。
+                <strong>MEGA 7+是用来干什么的？</strong><br />
+                方便每日观察美股/港股核心科技龙头的表现，数据与QDII额度整合，便于投资决策。
               </li>
               <li>
                 <strong>MEGA 7+为啥没有9月11日以前的数据？</strong><br />
@@ -420,10 +546,6 @@ export default function Home() {
               <li>
                 <strong>MEGA 7+的数据来源？</strong><br />
                 数据来源于开源库 <a href="https://github.com/akshare/akshare" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">AKSHARE</a>。
-              </li>
-              <li>
-                <strong>MEGA 7+是用来干什么的？</strong><br />
-                方便每日观察美股/港股核心科技龙头的表现，数据与QDII额度整合，便于投资决策，无需再手动查邮箱。
               </li>
             </ol>
           </div>
