@@ -3,6 +3,7 @@ import Head from 'next/head'
 import { useForm } from '@formspree/react'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
+import React from 'react'
 
 export default function Home() {
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '', fund_code: '', country: '' })
@@ -92,7 +93,9 @@ export default function Home() {
     const formattedDate = selectedDate.toISOString().split('T')[0]
     const res = await fetch(`/api/stocks?date=${formattedDate}`)
     const fetchedStockData = await res.json()
-    setStockData(fetchedStockData)
+    // Always sort the newly fetched data
+    const sortedStockData = sortData(fetchedStockData, sortKey, sortDirection)
+    setStockData(sortedStockData)
     setStockLoading(false)
   }
 
@@ -100,7 +103,14 @@ export default function Home() {
     if (activeTab === 'stocks') {
       fetchStockData()
     }
-  }, [activeTab, selectedDate])
+  }, [activeTab])
+
+  // Add this useEffect to fetch stock data when selectedDate changes
+  useEffect(() => {
+    if (activeTab === 'stocks') {
+      fetchStockData()
+    }
+  }, [selectedDate])
 
   useEffect(() => {
     if (activeTab === 'stocks' && stockData.length > 0) {
@@ -108,14 +118,6 @@ export default function Home() {
     }
     // eslint-disable-next-line
   }, [sortKey, sortDirection])
-
-  // Ensure initial sort after fetch
-  useEffect(() => {
-    if (activeTab === 'stocks' && stockData.length > 0) {
-      setStockData(sortData(stockData, sortKey, sortDirection))
-    }
-    // eslint-disable-next-line
-  }, [stockData, activeTab])
 
   const formatDate = (date: Date) => {
     return date.getDate().toString().padStart(2, '0')
@@ -134,6 +136,14 @@ export default function Home() {
 
   // Ref for the date picker
   const datePickerRef = useRef<DatePicker>(null);
+
+  // Custom input for DatePicker
+  const DatePickerCustomInput = React.forwardRef<HTMLInputElement, any>(({ value, onClick }, ref) => (
+    <div className="flex items-center justify-end w-full bg-transparent cursor-pointer" onClick={onClick} ref={ref}>
+      <span className="mr-1">📅</span>
+      <span className="text-right w-full">{value}</span>
+    </div>
+  ))
 
   return (
     <>
@@ -313,26 +323,27 @@ export default function Home() {
           )}
           {activeTab === 'stocks' && (
             <>
-              <div className="mb-2 flex items-center">
-                <span className={`mr-2 font-semibold ${stockMarket === 'US' ? 'text-indigo-700' : 'text-gray-500'}`}>美股</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" checked={stockMarket === 'HK'} onChange={() => setStockMarket(m => m === 'US' ? 'HK' : 'US')} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:bg-indigo-600 transition"></div>
-                  <span className="ml-3 font-semibold text-gray-500">港股</span>
-                </label>
-                <div className="ml-auto relative">
-                  <div className="flex items-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-lg transition cursor-pointer">
-                    <span className="mr-1">📅</span>
-                    <DatePicker
-                      selected={selectedDate}
-                      onChange={handleDateChange}
-                      minDate={minDate}
-                      maxDate={maxDate}
-                      dateFormat="yyyy-MM-dd"
-                      className="bg-transparent cursor-pointer"
-                      ref={datePickerRef}
-                    />
-                  </div>
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className={`mr-2 font-semibold ${stockMarket === 'US' ? 'text-indigo-700' : 'text-gray-500'}`}>美股</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={stockMarket === 'HK'} onChange={() => setStockMarket(m => m === 'US' ? 'HK' : 'US')} className="sr-only peer" />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:bg-indigo-600 transition"></div>
+                    <span className="ml-3 font-semibold text-gray-500">港股</span>
+                  </label>
+                </div>
+                <div className="relative flex items-center justify-end w-40">
+                  <DatePicker
+                    selected={selectedDate}
+                    onChange={handleDateChange}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    dateFormat="yyyy-MM-dd"
+                    className="bg-transparent cursor-pointer text-right w-full pr-7"
+                    ref={datePickerRef}
+                    calendarClassName="right-0"
+                    customInput={<DatePickerCustomInput />}
+                  />
                 </div>
               </div>
               <div className="overflow-x-auto rounded-xl shadow-lg bg-white/90">

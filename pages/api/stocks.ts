@@ -17,10 +17,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const stocks = []
 
   try {
-    // Scan all tickers for the given date using the primary key (ticker+date)
-    // If you want all stocks for a date, you need a GSI on 'date' (already used above)
-    // If you want to fetch a specific ticker+date, you can use GetItem or Query with both keys
-    // Here, we keep the GSI approach to get all stocks for a date
     const params = {
       TableName: 'stock_px_changed',
       IndexName: 'date-index', // GSI on 'date'
@@ -34,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     const data = await client.send(new QueryCommand(params))
+    
     if (data.Items && data.Items.length > 0) {
       for (const dbItem of data.Items) {
         const item = unmarshall(dbItem)
@@ -49,9 +46,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
     }
+    
     res.status(200).json(stocks)
   } catch (error) {
-    console.error('Error fetching stock data from DynamoDB:', error)
     res.status(500).json({ error: 'Failed to fetch stock data' })
   }
 }
