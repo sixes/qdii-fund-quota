@@ -93,8 +93,13 @@ export default function Home() {
     const formattedDate = selectedDate.toISOString().split('T')[0]
     const res = await fetch(`/api/stocks?date=${formattedDate}`)
     const fetchedStockData = await res.json()
-    // Always sort the newly fetched data
-    const sortedStockData = sortData(fetchedStockData, sortKey, sortDirection)
+    let sortedStockData: any[] = []
+    if (Array.isArray(fetchedStockData)) {
+      sortedStockData = sortData(fetchedStockData, sortKey, sortDirection)
+    } else {
+      // Handle error response
+      sortedStockData = []
+    }
     setStockData(sortedStockData)
     setStockLoading(false)
   }
@@ -172,7 +177,7 @@ export default function Home() {
               className={`px-4 py-2 rounded-lg font-semibold transition ml-4 ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
               onClick={() => setActiveTab('stocks')}
             >
-              Mega 7 股票
+              Mega 7+ 股票
             </button>
           </div>
           {activeTab === 'funds' && (
@@ -384,6 +389,44 @@ export default function Home() {
               </div>
             </>
           )}
+          {/* QA Section for both tabs */}
+          <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">
+            <h2 className="text-xl font-semibold text-indigo-700 mb-4">常见问题（QA）</h2>
+            <ol className="list-decimal list-inside space-y-2 text-gray-700 text-base">
+              <li>
+                <strong>什么是QDII基金？</strong><br />
+                QDII基金是指合格境内机构投资者（Qualified Domestic Institutional Investor）通过境内基金公司募集资金，投资于境外市场的基金产品。
+              </li>
+              <li>
+                <strong>为啥做这个网站？这个列表的用途是什么？</strong><br />
+                一般可以通过银行APP、第三方基金销售平台或基金公司申购基金，但各渠道展示的数据有限。例如，某只基金有A类和C类份额，A类收取申购费，C类不收取。在银行和第三方平台通常只展示A类，C类则不显示。本网站致力于消除信息差，方便投资者快速找到满足自己申购额度的基金。
+              </li>
+              <li>
+                <strong>这些数据来自哪里？可靠吗？</strong><br />
+                数据均来自基金公司发布的官方公告。我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们会力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
+              </li>
+              <li>
+                <strong>投资纳斯达克指数或者标普500指数回报有多少？</strong><br />
+根据历史数据（截至2025年9月13日），纳斯达克100指数过去10年年化回报约18.56%，30年约13.44%，波动性较高，适合高风险偏好者。标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨19%，标普500涨15%；2025年初至今，分别涨30.12%和24.56%。相比之下，香港分红保险IRR约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，稳健型选标普500，或混合配置。若遇保险推销，无需焦虑，评估条款并对比指数基金回报。
+              </li>
+              <li>
+                <strong>这些数据多久更新一次？</strong><br />
+                QDII基金申购额度每天3:00和18:00更新，MEGA 7+股票数据每天8:30更新。
+              </li>
+              <li>
+                <strong>MEGA 7+为啥没有9月11日以前的数据？</strong><br />
+                9月11日以前的数据未存入数据库，仅保存在个人邮箱。从9月12日起，每天数据会自动保存并可按日期查询。
+              </li>
+              <li>
+                <strong>MEGA 7+的数据来源？</strong><br />
+                数据来源于开源库 <a href="https://github.com/akshare/akshare" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">AKSHARE</a>。
+              </li>
+              <li>
+                <strong>MEGA 7+是用来干什么的？</strong><br />
+                方便每日观察美股/港股核心科技龙头的表现，数据与QDII额度整合，便于投资决策，无需再手动查邮箱。
+              </li>
+            </ol>
+          </div>
           <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">
             <h2 className="text-xl font-semibold text-indigo-700 mb-4">留言反馈</h2>
             <p className="text-gray-600 mb-4">有任何问题或建议，请留下您的信息。我们会尽快回复。</p>

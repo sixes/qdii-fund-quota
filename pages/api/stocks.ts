@@ -49,6 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     res.status(200).json(stocks)
   } catch (error) {
+    console.error('Error fetching stock data from DynamoDB:', error)
     res.status(500).json({ error: 'Failed to fetch stock data' })
   }
 }
