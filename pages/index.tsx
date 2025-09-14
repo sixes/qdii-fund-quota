@@ -21,6 +21,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Script from 'next/script';
 
 export default function Home() {
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' });
@@ -220,6 +221,21 @@ export default function Home() {
         <meta name="robots" content="index, follow" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-KYCK18CLKM');
+        `}
+      </Script>
+
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-2">
         <div className="max-w-5xl mx-auto">
           <div className="mb-8 text-center">
