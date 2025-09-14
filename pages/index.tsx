@@ -720,6 +720,11 @@ export default function Home() {
                 <strong>MEGA 7+的数据来源？</strong><br />
                 数据来源于开源库 <a href="https://github.com/akshare/akshare" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">AKSHARE</a>。
               </li>
+              <li>
+                <strong>可以安装APP到手机/电脑吗？</strong><br />
+                可以。在手机浏览器中打开本网站，选择“分享” -> “添加到主屏幕”即可。
+                在电脑浏览器中打开本网站，点击地址栏右侧的安装图标（+号），或通过浏览器菜单选择“安装应用”。
+              </li>
             </ol>
           </div>
           <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">

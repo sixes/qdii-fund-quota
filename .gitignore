@@ -8,3 +8,13 @@ quota-sample.csv
 fund-companies.txt
 fund_quota.csv
 quota.json
+
+# PWA files
+/public/sw.js
+/public/workbox-*.js
+/public/sw.js.map
+/public/workbox-*.js.map
+
+# Other build artifacts
+/.next/
+/out/
