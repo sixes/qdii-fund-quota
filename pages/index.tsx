@@ -1,21 +1,13 @@
-import { useEffect, useState, useRef } from 'react'
-import Head from 'next/head'
-import { useForm } from '@formspree/react'
-import DatePicker from 'react-datepicker'
-import "react-datepicker/dist/react-datepicker.css"
-import React from 'react'
-import { Switch } from '@headlessui/react'
-import Autocomplete from '@mui/material/Autocomplete'
-import TextField from '@mui/material/TextField'
-import Pagination from '@mui/material/Pagination'
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  flexRender,
-  ColumnDef,
-  SortingState,
-} from '@tanstack/react-table';
+import { useEffect, useState, useRef } from 'react';
+import Head from 'next/head';
+import { useForm } from '@formspree/react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import React from 'react';
+import { Switch } from '@headlessui/react';
+import Autocomplete from '@mui/material/Autocomplete';
+import TextField from '@mui/material/TextField';
+import Pagination from '@mui/material/Pagination';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -24,278 +16,199 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import TableSortLabel from '@mui/material/TableSortLabel';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Typography from '@mui/material/Typography';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 export default function Home() {
-  const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' })
-  const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [sortKey, setSortKey] = useState<string>('quota')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
-  // Per-tab stored sort preferences
-  const [fundSortKey, setFundSortKey] = useState<string>('quota')
-  const [fundSortDirection, setFundSortDirection] = useState<'asc' | 'desc'>('desc')
-  const [stockSortKey, setStockSortKey] = useState<string>('changeFromAthPercent')
-  const [stockSortDirection, setStockSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [fundCompanies, setFundCompanies] = useState<string[]>([]) // State to store unique fund companies
-  const [state, handleSubmit] = useForm("xyzdlpln")
-  const [message, setMessage] = useState('')
-  const [activeTab, setActiveTab] = useState<'funds' | 'stocks'>('funds')
-  const [stockData, setStockData] = useState<any[]>([])
-  const [stockLoading, setStockLoading] = useState(false)
-  const [stockMarket, setStockMarket] = useState<'US' | 'HK'>('US')
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' });
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [sortKey, setSortKey] = useState<string>('quota');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [fundSortKey, setFundSortKey] = useState<string>('quota');
+  const [fundSortDirection, setFundSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [stockSortKey, setStockSortKey] = useState<string>('changeFromAthPercent');
+  const [stockSortDirection, setStockSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [fundCompanies, setFundCompanies] = useState<string[]>([]);
+  const [state, handleSubmit] = useForm("xyzdlpln");
+  const [message, setMessage] = useState('');
+  const [activeTab, setActiveTab] = useState<'funds' | 'stocks'>('funds');
+  const [stockData, setStockData] = useState<any[]>([]);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockMarket, setStockMarket] = useState<'US' | 'HK'>('US');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'))
+  const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'));
 
-  // Fetch all data on mount
   useEffect(() => {
-    fetchData()
-    setFundCompanies(companyList) // Set companies directly from the list
-    // eslint-disable-next-line
-  }, [])
+    fetchData();
+    setFundCompanies(companyList);
+  }, []);
 
   const fetchData = async (customFilters = filters) => {
-    setLoading(true)
-    const params = new URLSearchParams()
-    Object.entries(customFilters).forEach(([k, v]) => { if (v) params.append(k, v) })
-    const res = await fetch('/api/quotas?' + params.toString())
-    const fetchedData = await res.json()
-    // sort using stored fund preferences so user sorting is preserved
-    setData(sortData(fetchedData, fundSortKey, fundSortDirection))
-    setLoading(false)
-  }
+    setLoading(true);
+    const params = new URLSearchParams();
+    Object.entries(customFilters).forEach(([k, v]) => { if (v) params.append(k, v); });
+    const res = await fetch('/api/quotas?' + params.toString());
+    const fetchedData = await res.json();
+    setData(sortData(fetchedData, fundSortKey, fundSortDirection));
+    setLoading(false);
+  };
 
   const sortData = (data: any[], key: string, direction: 'asc' | 'desc') => {
-    if (!key) return data
+    if (!key) return data;
     return [...data].sort((a, b) => {
-      let aVal = a[key]
-      let bVal = b[key]
-      // Special handling for quota in fund tab: convert USD to RMB
+      let aVal = a[key];
+      let bVal = b[key];
       if (activeTab === 'funds' && key === 'quota') {
-        const aQuota = a.currency === 'USD' ? Number(a.quota) * 7 : Number(a.quota)
-        const bQuota = b.currency === 'USD' ? Number(b.quota) * 7 : Number(b.quota)
-        return direction === 'asc' ? aQuota - bQuota : bQuota - aQuota
+        const aQuota = a.currency === 'USD' ? Number(a.quota) * 7 : Number(a.quota);
+        const bQuota = b.currency === 'USD' ? Number(b.quota) * 7 : Number(b.quota);
+        return direction === 'asc' ? aQuota - bQuota : bQuota - aQuota;
       }
       if (typeof aVal === 'string' && !isNaN(Number(aVal))) {
-        aVal = Number(aVal)
-        bVal = Number(bVal)
+        aVal = Number(aVal);
+        bVal = Number(bVal);
       }
       if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+        return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }
-      return direction === 'asc' ? aVal - bVal : bVal - aVal
-    })
-  }
+      return direction === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+  };
 
   const handleSort = (key: string) => {
-    const newDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc'
-    // store per-tab preference and apply immediately to in-memory data
+    const newDirection = sortKey === key && sortDirection === 'asc' ? 'desc' : 'asc';
     if (activeTab === 'stocks') {
-      setStockSortKey(key)
-      setStockSortDirection(newDirection)
-      setStockData(sortData(stockData, key, newDirection))
+      setStockSortKey(key);
+      setStockSortDirection(newDirection);
+      setStockData(sortData(stockData, key, newDirection));
     } else {
-      setFundSortKey(key)
-      setFundSortDirection(newDirection)
-      setData(sortData(data, key, newDirection))
+      setFundSortKey(key);
+      setFundSortDirection(newDirection);
+      setData(sortData(data, key, newDirection));
     }
-    // update global sortKey/sortDirection used for arrow display
-    setSortKey(key)
-    setSortDirection(newDirection)
-  }
+    setSortKey(key);
+    setSortDirection(newDirection);
+  };
 
-  const handleSearch = () => fetchData()
+  const handleSearch = () => fetchData();
 
   const resetFilters = () => {
-    const clearedFilters = { fund_company: '', fund_name: '', fund_code: '', country: '' }
-    setFilters(clearedFilters)
-    fetchData(clearedFilters) // Pass cleared filters directly to fetchData
-  }
+    const clearedFilters = { fund_company: '', fund_name: '', fund_code: '', country: '' };
+    setFilters(clearedFilters);
+    fetchData(clearedFilters);
+  };
 
   const openPdf = (pdfId: number) => {
-    const url = `http://eid.csrc.gov.cn/fund/disclose/instance_html_view.do?instanceid=${pdfId}`
-    window.open(url, '_blank', 'noopener,noreferrer') // Open the PDF in a new tab
-  }
+    const url = `http://eid.csrc.gov.cn/fund/disclose/instance_html_view.do?instanceid=${pdfId}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
     if (!email.trim()) {
-      const confirmed = window.confirm('您未提供邮箱，我们无法回复您的留言。确定要继续提交吗？')
+      const confirmed = window.confirm('您未提供邮箱，我们无法回复您的留言。确定要继续提交吗？');
       if (!confirmed) {
-        e.preventDefault()
-        return
+        e.preventDefault();
+        return;
       }
     }
-    handleSubmit(e)
-  }
+    handleSubmit(e);
+  };
 
   const fetchStockData = async () => {
-    setStockLoading(true)
-    const formattedDate = selectedDate.toISOString().split('T')[0]
-    const res = await fetch(`/api/stocks?date=${formattedDate}`)
-    const fetchedStockData = await res.json()
-    let sortedStockData: any[] = []
+    setStockLoading(true);
+    const formattedDate = selectedDate.toISOString().split('T')[0];
+    const res = await fetch(`/api/stocks?date=${formattedDate}`);
+    const fetchedStockData = await res.json();
+    let sortedStockData: any[] = [];
     if (Array.isArray(fetchedStockData)) {
-      // sort using stored stock preferences so user sorting is preserved
-      sortedStockData = sortData(fetchedStockData, stockSortKey, stockSortDirection)
+      sortedStockData = sortData(fetchedStockData, stockSortKey, stockSortDirection);
     } else {
-      sortedStockData = []
+      sortedStockData = [];
     }
-    setStockData(sortedStockData)
-    setStockLoading(false)
-  }
+    setStockData(sortedStockData);
+    setStockLoading(false);
+  };
 
   useEffect(() => {
     if (activeTab === 'stocks') {
-      fetchStockData()
+      fetchStockData();
     }
-  }, [activeTab])
+  }, [activeTab]);
 
-  // Add this useEffect to fetch stock data when selectedDate changes
   useEffect(() => {
     if (activeTab === 'stocks') {
-      fetchStockData()
+      fetchStockData();
     }
-  }, [selectedDate])
+  }, [selectedDate]);
 
   useEffect(() => {
     if (activeTab === 'stocks' && stockData.length > 0) {
       // do nothing, handled by fetchStockData
     } else if (activeTab === 'funds' && data.length > 0) {
-      setData(sortData(data, sortKey, sortDirection))
+      setData(sortData(data, sortKey, sortDirection));
     }
-    // eslint-disable-next-line
-  }, [sortKey, sortDirection])
+  }, [sortKey, sortDirection]);
 
   const formatDate = (date: Date) => {
-    return date.getDate().toString().padStart(2, '0')
-  }
+    return date.getDate().toString().padStart(2, '0');
+  };
 
   const handleDateChange = (date: Date | null) => {
     if (date) {
-      setSelectedDate(date)
+      setSelectedDate(date);
     }
-  }
+  };
 
-  const minDate = new Date('2025-09-12')
-  const maxDate = new Date()
+  const minDate = new Date('2025-09-12');
+  const maxDate = new Date();
 
-  const filteredStockData = stockData.filter(stock => stockMarket === 'US' ? stock.market === 'US' : stock.market === 'HK')
+  const filteredStockData = stockData.filter(stock => stockMarket === 'US' ? stock.market === 'US' : stock.market === 'HK');
 
-  // Ref for the date picker
   const datePickerRef = useRef<DatePicker>(null);
 
-  // Custom input for DatePicker
   const DatePickerCustomInput = React.forwardRef<HTMLInputElement, any>(({ value, onClick }, ref) => (
     <div className="flex items-center justify-end w-full bg-transparent cursor-pointer" onClick={onClick} ref={ref}>
       <span className="mr-1">📅</span>
       <span className="text-right w-full">{value}</span>
     </div>
-  ))
+  ));
 
-  // Pagination state
-  const [fundsPage, setFundsPage] = useState(1)
-  const [stocksPage, setStocksPage] = useState(1)
-  const ITEMS_PER_PAGE = 20
+  const [fundsPage, setFundsPage] = useState(1);
+  const [stocksPage, setStocksPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
-  // Reset page when filters or tab change
-  useEffect(() => { setFundsPage(1) }, [filters, activeTab])
-  useEffect(() => { setStocksPage(1) }, [selectedDate, stockMarket, activeTab])
+  useEffect(() => { setFundsPage(1); }, [filters, activeTab]);
+  useEffect(() => { setStocksPage(1); }, [selectedDate, stockMarket, activeTab]);
 
-  // Pass full data to React Table, slice after sorting for pagination
-  const pagedFunds = data
-  const pagedStocks = filteredStockData.slice((stocksPage-1)*ITEMS_PER_PAGE, stocksPage*ITEMS_PER_PAGE)
-  const fundsTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE)
-  const stocksTotalPages = Math.ceil(filteredStockData.length / ITEMS_PER_PAGE)
+  const pagedFunds = data;
+  const pagedStocks = filteredStockData.slice((stocksPage-1)*ITEMS_PER_PAGE, stocksPage*ITEMS_PER_PAGE);
+  const fundsTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+  const stocksTotalPages = Math.ceil(filteredStockData.length / ITEMS_PER_PAGE);
 
-  // Helper for pagination page numbers
   function getPageNumbers(current: number, total: number) {
-    if (total <= 4) return Array.from({length: total}, (_,i) => i+1)
-    if (current <= 2) return [1,2,3,4]
-    if (current >= total-1) return [total-3, total-2, total-1, total]
-    return [current-1, current, current+1, current+2]
+    if (total <= 4) return Array.from({length: total}, (_,i) => i+1);
+    if (current <= 2) return [1,2,3,4];
+    if (current >= total-1) return [total-3, total-2, total-1, total];
+    return [current-1, current, current+1, current+2];
   }
 
   useEffect(() => {
-    // when switching tabs, restore that tab's last sort and fetch data accordingly
     if (activeTab === 'funds') {
-      setSortKey(fundSortKey)
-      setSortDirection(fundSortDirection)
-      fetchData()
+      setSortKey(fundSortKey);
+      setSortDirection(fundSortDirection);
+      fetchData();
     } else if (activeTab === 'stocks') {
-      setSortKey(stockSortKey)
-      setSortDirection(stockSortDirection)
-      fetchStockData()
+      setSortKey(stockSortKey);
+      setSortDirection(stockSortDirection);
+      fetchStockData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
-
-  // React Table columns for funds
-  const columns = React.useMemo<ColumnDef<any, any>[]>(
-    () => [
-      {
-        accessorKey: 'fund_company',
-        header: () => '基金公司',
-        cell: info => info.getValue(),
-      },
-      {
-        accessorKey: 'fund_name',
-        header: () => '基金名称',
-        cell: info => info.getValue(),
-      },
-      {
-        accessorKey: 'fund_code',
-        header: () => '基金代码',
-        cell: info => info.getValue(),
-      },
-      {
-        accessorKey: 'quota',
-        header: () => '额度',
-        cell: info => info.row.original.quota.toLocaleString(),
-      },
-      {
-        accessorKey: 'share_class',
-        header: () => '份额类别',
-        cell: info => info.getValue(),
-      },
-      {
-        accessorKey: 'currency',
-        header: () => '币种',
-        cell: info => info.getValue(),
-      },
-      {
-        id: 'pdf',
-        header: () => '公告',
-        cell: info => (
-          <button
-            className="text-blue-600 hover:underline"
-            onClick={() => openPdf(info.row.original.pdf_id)}
-          >
-            📄
-          </button>
-        ),
-      },
-      {
-        accessorKey: 'otc',
-        header: () => 'OTC',
-        cell: info => info.getValue(),
-      },
-    ],
-    []
-  )
-
-  // React Table state for sorting
-  const [tableSorting, setTableSorting] = useState<SortingState>([])
-  const table = useReactTable({
-    data: data,
-    columns,
-    state: { sorting: tableSorting },
-    onSortingChange: setTableSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    manualSorting: false,
-  })
+  }, [activeTab]);
 
   return (
     <>
@@ -609,10 +522,31 @@ export default function Home() {
                       </TableRow>
                     ) : (
                       pagedStocks.map((stock, i) => (
-                        <TableRow key={i} className="hover:bg-indigo-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
+                        <TableRow
+                          key={i}
+                          className="hover:bg-indigo-50 transition"
+                          sx={{
+                            height: { xs: 20, sm: 32 },
+                            backgroundColor: stock.changeFromAthPercent <= -30
+                              ? 'rgba(255, 0, 0, 0.2)' // Red for <= -30%
+                              : stock.changeFromAthPercent <= -20
+                              ? 'rgba(255, 165, 0, 0.2)' // Orange for <= -20%
+                              : stock.changeFromAthPercent <= -10
+                              ? 'rgba(255, 255, 0, 0.2)' // Yellow for <= -10%
+                              : 'transparent',
+                          }}
+                        >
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.ticker}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.name}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.changeFromAthPercent}</TableCell>
+                          <TableCell
+                            sx={{
+                              fontSize: { xs: '0.6rem', sm: '0.925rem' },
+                              py: 0,
+                              px: { xs: 0.5, sm: 1 },
+                            }}
+                          >
+                            {stock.changeFromAthPercent}
+                          </TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.lastClosingPrice}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.lastChangePercent}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.allTimeHigh}</TableCell>
@@ -652,80 +586,33 @@ export default function Home() {
           {/* QA Section for both tabs */}
           <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-4 sm:p-6 mb-8 mt-6">
             <h2 className="text-lg sm:text-xl font-semibold text-indigo-700 mb-4">常见问题（QA）</h2>
-            <ol className="list-decimal list-inside space-y-2 text-gray-700 text-sm sm:text-base">
-              <li>
-                <strong>什么是QDII基金？</strong><br />
-                QDII基金是指合格境内机构投资者（Qualified Domestic Institutional Investor）通过境内基金公司募集资金，投资于境外市场的基金产品。
-              </li>
-              <li>
-                <strong>为啥做这个网站？这个列表的用途是什么？</strong><br />
-                一般可以通过银行APP、第三方基金销售平台或基金公司申购基金，但各渠道展示的数据有限。例如，某只基金有A类和C类份额，A类收取申购费，C类不收取。在银行和第三方平台通常只展示A类，C类则不显示。本网站致力于消除信息差，方便投资者快速找到满足自己申购额度的基金。
-              </li>
-              <li>
-                <strong>有推荐的交易平台吗？</strong><br />
-                本网站不提供任何交易平台，只提供数据展示。不偏向任何机构。
-              </li>
-              <li>
-                <strong>申购额度是什么？</strong><br />
-                申购额度是指基金公司允许投资者购买该基金的最大金额。额度用完后，可能无法继续申购该基金。
-              </li>
-              <li>
-                <strong>为什么有些基金额度是0？</strong><br />
-                额度为0表示该基金当前无法申购，可能是因为额度已用完或基金公司暂停申购。
-              </li>
-              <li>
-                <strong>为什么没有列出场内ETF？</strong><br />
-                暂时不包含场内ETF，因为场内ETF在二级市场交易，没有申购额度限制。
-              </li>
-              <li>
-                <strong>如何与场内ETF进行套利？</strong><br />
-                场内ETF套利涉及在二级市场买卖ETF份额与在一级市场申购赎回ETF份额之间的价差交易。套利者通过低买高卖获取利润，但需考虑交易费用、税务影响及市场风险。
-                建议有经验的投资者参与，初学者应谨慎。
-              </li>
-              <li>
-                <strong>列出的申购额度一定可以购买吗？</strong><br />
-                不一定。实际可申购额度可能因渠道、时间等因素有所不同。建议在申购前通过银行APP或第三方平台确认实际可申购额度。
-                另外，我们发现，某基金公司在公告中列出D类份额及其申购额度，但在银行APP和第三方平台均不显示D类份额，经咨询官方客服，确认D类份额无法申购 :( 
-                因此，建议在申购前务必确认份额类别和额度的有效性。
-              </li>
-              <li>
-                <strong>投资纳斯达克指数或者标普500指数回报有多少？</strong><br />
-根据历史数据（截至2025年9月13日），纳斯达克100指数过去10年年化回报约18.56%，30年约13.44%，波动性较高，适合高风险偏好者。
-标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨24.88%，标普500涨25.02%；2025年初至今，分别涨14.66%和12.98%。
-相比之下，香港分红保险IRR(Internal Rate of Return)约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，
-稳健型选标普500，或混合配置。若遇保险推销，无需焦虑 :) Anyway, they serve different needs:)
-              </li>
-              <li>
-                <strong>这些数据来自哪里？可靠吗？</strong><br />
-                数据均来自基金公司发布的官方公告。尽管如此，我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
-              </li>
-              <li>
-                <strong>这些数据多久更新一次？</strong><br />
-                QDII基金申购额度每天3:00(北京时间，下同)和18:00更新，MEGA 7+股票数据每天8:30更新。
-              </li>
-              <li>
-                <strong>MEGA 7+是用来干什么的？</strong><br />
-                方便每日观察美股/港股核心科技龙头的表现，数据与QDII额度整合，便于投资决策。
-              </li>
-              <li>
-                <strong>MEGA 7+包含哪些股票？</strong><br />
-                MEGA 7指纳斯达克100指数中的7只核心科技龙头（苹果、微软、亚马逊、谷歌、Meta、英伟达、特斯拉）。
-                本表中包含了MEGA 7杠杆ETF及港股部分核心科技龙头（腾讯、阿里巴巴等），故称为MEGA 7+。
-              </li>
-              <li>
-                <strong>MEGA 7+为啥没有9月11日以前的数据？</strong><br />
-                9月11日以前的数据未存入数据库，仅保存在个人邮箱。从9月12日起，每天数据会自动保存并可按日期查询。
-              </li>
-              <li>
-                <strong>MEGA 7+的数据来源？</strong><br />
-                数据来源于开源库 <a href="https://github.com/akshare/akshare" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">AKSHARE</a>。
-              </li>
-              <li>
-                <strong>可以安装APP到手机/电脑吗？</strong><br />
-                可以。在手机浏览器中打开本网站，选择“分享” -> “添加到主屏幕”即可。
-                在电脑浏览器中打开本网站，点击地址栏右侧的安装图标（+号），或通过浏览器菜单选择“安装应用”。
-              </li>
-            </ol>
+            {[
+              { question: "什么是QDII基金？", answer: "QDII基金是指合格境内机构投资者（Qualified Domestic Institutional Investor）通过境内基金公司募集资金，投资于境外市场的基金产品。" },
+              { question: "为啥做这个网站？这个列表的用途是什么？", answer: "一般可以通过银行APP、第三方基金销售平台或基金公司申购基金，但各渠道展示的数据有限。例如，某只基金有A类和C类份额，A类收取申购费，C类不收取。在银行和第三方平台通常只展示A类，C类则不显示。本网站致力于消除信息差，方便投资者快速找到满足自己申购额度的基金。" },
+              { question: "有推荐的交易平台吗？", answer: "本网站不提供任何交易平台，只提供数据展示。致力于不偏不倚。" },
+              { question: "申购额度是什么？", answer: "申购额度是指基金公司允许投资者购买该基金的最大金额。额度用完后，可能无法继续申购该基金。" },
+              { question: "为什么有些基金额度是0？", answer: "额度为0表示该基金当前无法申购，可能是因为额度已用完或基金公司暂停申购。" },
+              { question: "为什么没有列出场内ETF？", answer: "暂时不包含场内ETF，因为场内ETF在二级市场交易，没有申购额度限制。" },
+              { question: "如何与场内ETF进行套利？", answer: "场内ETF套利涉及在二级市场买卖ETF份额与在一级市场申购赎回ETF份额之间的价差交易。套利者通过低买高卖获取利润，但需考虑交易费用、税务影响及市场风险。建议有经验的投资者参与，初学者应谨慎。" },
+              { question: "列出的申购额度一定可以购买吗？", answer: "不一定。实际可申购额度可能因渠道、时间等因素有所不同。建议在申购前通过银行APP或第三方平台确认实际可申购额度。另外，我们发现，某基金公司在公告中列出D类份额及其申购额度，但在银行APP和第三方平台均不显示D类份额，经咨询官方客服，确认D类份额无法申购 :( 因此，建议在申购前务必确认份额类别和额度的有效性。" },
+              { question: "投资纳斯达克指数或者标普500指数回报有多少？", answer: "根据历史数据（截至2025年9月13日），纳斯达克100指数过去10年年化回报约18.56%，30年约13.44%，波动性较高，适合高风险偏好者。标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨24.88%，标普500涨25.02%；2025年初至今，分别涨14.66%和12.98%。相比之下，香港分红保险IRR(Internal Rate of Return)约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，稳健型选标普500，或混合配置。若遇保险推销，无需焦虑 :) Anyway, they serve different needs:)" },
+              { question: "这些数据来自哪里？可靠吗？", answer: "数据均来自基金公司发布的官方公告。尽管如此，我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。" },
+              { question: "这些数据多久更新一次？", answer: "QDII基金申购额度每天3:00(北京时间，下同)和18:00更新，MEGA 7+股票数据每天8:30更新。" },
+              { question: "MEGA 7+是用来干什么的？", answer: "方便每日观察美股/港股核心科技龙头的表现，数据与QDII额度整合，便于投资决策。" },
+              { question: "MEGA 7+包含哪些股票？", answer: "MEGA 7指纳斯达克100指数中的7只核心科技龙头（苹果、微软、亚马逊、谷歌、Meta、英伟达、特斯拉）。本表中包含了部分杠杆ETF及港股核心科技龙头（腾讯、阿里巴巴等），故称为MEGA 7+。" },
+              { question: "MEGA 7+为啥没有9月11日以前的数据？", answer: "9月11日以前的数据未存入数据库，仅保存在个人邮箱。从9月12日起，每天数据会自动保存并可按日期查询。" },
+              { question: "MEGA 7+的数据来源？", answer: "数据来源于开源库 AKSHARE。" },
+              { question: "可以安装APP到手机/电脑吗？", answer: "可以。在手机浏览器中打开本网站，选择“分享” -> “添加到主屏幕”即可。在电脑浏览器中打开本网站，点击地址栏右侧的安装图标（+号），或通过浏览器菜单选择“安装应用”。" },
+            ].map((item, index) => (
+              <Accordion key={index}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6" fontWeight="bold">{item.question}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body1" color="textSecondary">{item.answer}</Typography>
+                </AccordionDetails>
+              </Accordion>
+            ))}
           </div>
           <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">
             <h2 className="text-xl font-semibold text-indigo-700 mb-4">留言反馈</h2>
