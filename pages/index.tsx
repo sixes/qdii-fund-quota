@@ -5,8 +5,9 @@ import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import React from 'react'
 import { Switch } from '@headlessui/react'
-import Select from 'react-select'
-import CreatableSelect from 'react-select/creatable'
+import Autocomplete from '@mui/material/Autocomplete'
+import TextField from '@mui/material/TextField'
+import Pagination from '@mui/material/Pagination'
 import {
   useReactTable,
   getCoreRowModel,
@@ -23,7 +24,6 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import TableSortLabel from '@mui/material/TableSortLabel';
-import TablePagination from '@mui/material/TablePagination';
 
 export default function Home() {
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' })
@@ -330,94 +330,60 @@ export default function Home() {
           {activeTab === 'funds' && (
             <>
               <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 flex flex-col md:flex-row gap-4 items-center">
-                {/* Fund Company Select */}
+                {/* Fund Company Autocomplete */}
                 <div className="flex-1 min-w-[112px]">
-                  <Select
-                    options={[{ value: '', label: '基金公司' }, ...fundCompanies.map(c => ({ value: c, label: c }))]}
-                    value={fundCompanies.find(c => c === filters.fund_company) ? { value: filters.fund_company, label: filters.fund_company } : { value: '', label: '基金公司' }}
-                    onChange={option => {
-                      const newFilters = { ...filters, fund_company: option?.value || '' }
+                  <Autocomplete
+                    options={['', ...fundCompanies]}
+                    value={filters.fund_company}
+                    onChange={(_, value) => {
+                      const newFilters = { ...filters, fund_company: value || '' }
                       setFilters(newFilters)
                       fetchData(newFilters)
                     }}
-                    isClearable
-                    placeholder="基金公司"
-                    classNamePrefix="react-select"
-                    menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
-                    styles={{ menuPortal: base => ({ ...base, zIndex: 1302 }) }}
+                    renderInput={(params) => <TextField {...params} label="基金公司" variant="outlined" size="small" />}
+                    clearOnEscape
                   />
                 </div>
-                {/* Fund Name Creatable Select */}
+                {/* Fund Name Autocomplete with free solo */}
                 <div className="flex-1 min-w-[234px]">
-                  <CreatableSelect
-                    options={[
-                      { value: '标普', label: '标普' },
-                      { value: '标普500ETF', label: '标普500ETF' },
-                      { value: '道琼斯', label: '道琼斯' },
-                      { value: '精选', label: '精选' },
-                      { value: '黄金', label: '黄金' },
-                      { value: '恒生科技', label: '恒生科技' },
-                      { value: '恒生互联网', label: '恒生互联网' },
-                      { value: '日经', label: '日经' },
-                      { value: '纳斯达克100ETF', label: '纳斯达克100ETF' },
-                      { value: '生物科技', label: '生物科技' },
-                      { value: '石油', label: '石油' },
-                      { value: '债券', label: '债券' },
-                    ]}
-                    value={filters.fund_name ? { value: filters.fund_name, label: filters.fund_name } : null}
-                    onChange={option => {
-                      const newFilters = { ...filters, fund_name: option?.value || '' }
+                  <Autocomplete
+                    options={['标普', '标普500ETF', '道琼斯', '精选', '黄金', '恒生科技', '恒生互联网', '日经', '纳斯达克100ETF', '生物科技', '石油', '债券']}
+                    value={filters.fund_name}
+                    onChange={(_, value) => {
+                      const newFilters = { ...filters, fund_name: value || '' }
                       setFilters(newFilters)
                       fetchData(newFilters)
                     }}
-                    onCreateOption={inputValue => {
-                      const newFilters = { ...filters, fund_name: inputValue }
-                      setFilters(newFilters)
-                      fetchData(newFilters)
-                    }}
-                    isClearable
-                    placeholder="基金名称"
-                    classNamePrefix="react-select"
-                    menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
-                    styles={{ menuPortal: base => ({ ...base, zIndex: 1302 }) }}
+                    freeSolo
+                    renderInput={(params) => <TextField {...params} label="基金名称" variant="outlined" size="small" />}
+                    clearOnEscape
                   />
                 </div>
-                {/* Country Select */}
+                {/* Country Autocomplete */}
                 <div className="flex-1 min-w-[120px]">
-                  <Select
-                    options={[
-                      { value: '', label: '地区' },
-                      { value: '法国', label: '法国' },
-                      { value: '美国', label: '美国' },
-                      { value: '欧洲', label: '欧洲' },
-                      { value: '日本', label: '日本' },
-                      { value: '越南', label: '越南' },
-                      { value: '印度', label: '印度' },
-                      { value: '亚洲', label: '亚洲' },
-                      { value: '中国', label: '中国' },
-                    ]}
-                    value={filters.country ? { value: filters.country, label: filters.country } : { value: '', label: '地区' }}
-                    onChange={option => {
-                      const newFilters = { ...filters, country: option?.value || '' }
+                  <Autocomplete
+                    options={['', '法国', '美国', '欧洲', '日本', '越南', '印度', '亚洲', '中国']}
+                    value={filters.country}
+                    onChange={(_, value) => {
+                      const newFilters = { ...filters, country: value || '' }
                       setFilters(newFilters)
                       fetchData(newFilters)
                     }}
-                    isClearable
-                    placeholder="地区"
-                    classNamePrefix="react-select"
-                    menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
-                    styles={{ menuPortal: base => ({ ...base, zIndex: 1302 }) }}
+                    renderInput={(params) => <TextField {...params} label="地区" variant="outlined" size="small" />}
+                    clearOnEscape
                   />
                 </div>
                 {/* Fund Code Input */}
                 <div className="flex-1 min-w-[120px] relative">
-                  <input
-                    className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg w-full pl-8 transition"
-                    placeholder="基金代码"
+                  <TextField
+                    label="基金代码"
+                    variant="outlined"
+                    size="small"
                     value={filters.fund_code}
                     onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))}
+                    InputProps={{ startAdornment: <span style={{ color: '#9ca3af', marginRight: 4 }}>#</span> }}
+                    fullWidth
                   />
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">#</span>
                 </div>
                 <button
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition"
@@ -521,25 +487,21 @@ export default function Home() {
                     )}
                   </TableBody>
                 </Table>
-                {/* Custom centered pagination for funds */}
+                {/* Pagination for funds */}
                 {data.length > 0 && (
                   <div className="flex items-center w-full py-4 px-2 gap-2">
                     <div className="flex-1" />
                     <div className="flex justify-center items-center gap-2 flex-none mx-auto">
                       {data.length > ITEMS_PER_PAGE && (
-                        <>
-                          <button onClick={() => setFundsPage(p => Math.max(1, p-1))} disabled={fundsPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
-                          {fundsTotalPages > 4 && fundsPage > 3 && (
-                            <span className="px-1">...</span>
-                          )}
-                          {getPageNumbers(fundsPage, fundsTotalPages).slice(0,4).map(i => (
-                            <button key={i} onClick={()=>setFundsPage(i)} className={`px-2 py-1 rounded ${fundsPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
-                          ))}
-                          {fundsTotalPages > 4 && fundsPage < fundsTotalPages-2 && (
-                            <span className="px-1">...</span>
-                          )}
-                          <button onClick={() => setFundsPage(p => Math.min(fundsTotalPages, p+1))} disabled={fundsPage===fundsTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
-                        </>
+                        <Pagination
+                          count={fundsTotalPages}
+                          page={fundsPage}
+                          onChange={(_, value) => setFundsPage(value)}
+                          color="primary"
+                          shape="rounded"
+                          siblingCount={1}
+                          boundaryCount={1}
+                        />
                       )}
                     </div>
                     <div className="flex-1 flex justify-end">
@@ -657,19 +619,15 @@ export default function Home() {
                     <div className="flex-1" />
                     <div className="flex justify-center items-center gap-2 flex-none mx-auto">
                       {filteredStockData.length > ITEMS_PER_PAGE && (
-                        <>
-                          <button onClick={() => setStocksPage(p => Math.max(1, p-1))} disabled={stocksPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
-                          {stocksTotalPages > 4 && stocksPage > 3 && (
-                            <span className="px-1">...</span>
-                          )}
-                          {getPageNumbers(stocksPage, stocksTotalPages).map(i => (
-                            <button key={i} onClick={()=>setStocksPage(i)} className={`px-2 py-1 rounded ${stocksPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
-                          ))}
-                          {stocksTotalPages > 4 && stocksPage < stocksTotalPages-2 && (
-                            <span className="px-1">...</span>
-                          )}
-                          <button onClick={() => setStocksPage(p => Math.min(stocksTotalPages, p+1))} disabled={stocksPage===stocksTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
-                        </>
+                        <Pagination
+                          count={stocksTotalPages}
+                          page={stocksPage}
+                          onChange={(_, value) => setStocksPage(value)}
+                          color="primary"
+                          shape="rounded"
+                          siblingCount={1}
+                          boundaryCount={1}
+                        />
                       )}
                     </div>
                     <div className="flex-1 flex justify-end">
