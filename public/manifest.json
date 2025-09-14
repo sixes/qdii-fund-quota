@@ -1,6 +1,6 @@
 {
   "name": "QDII基金申购额度查询",
-  "short_name": "基金额度",
+  "short_name": "QDII基金申购额度",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
