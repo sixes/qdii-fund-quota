@@ -5,6 +5,25 @@ import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import React from 'react'
 import { Switch } from '@headlessui/react'
+import Select from 'react-select'
+import CreatableSelect from 'react-select/creatable'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+  ColumnDef,
+  SortingState,
+} from '@tanstack/react-table';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import TableSortLabel from '@mui/material/TableSortLabel';
+import TablePagination from '@mui/material/TablePagination';
 
 export default function Home() {
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' })
@@ -184,8 +203,8 @@ export default function Home() {
   useEffect(() => { setFundsPage(1) }, [filters, activeTab])
   useEffect(() => { setStocksPage(1) }, [selectedDate, stockMarket, activeTab])
 
-  // Paginated data
-  const pagedFunds = data.slice((fundsPage-1)*ITEMS_PER_PAGE, fundsPage*ITEMS_PER_PAGE)
+  // Pass full data to React Table, slice after sorting for pagination
+  const pagedFunds = data
   const pagedStocks = filteredStockData.slice((stocksPage-1)*ITEMS_PER_PAGE, stocksPage*ITEMS_PER_PAGE)
   const fundsTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE)
   const stocksTotalPages = Math.ceil(filteredStockData.length / ITEMS_PER_PAGE)
@@ -211,6 +230,72 @@ export default function Home() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
+
+  // React Table columns for funds
+  const columns = React.useMemo<ColumnDef<any, any>[]>(
+    () => [
+      {
+        accessorKey: 'fund_company',
+        header: () => '基金公司',
+        cell: info => info.getValue(),
+      },
+      {
+        accessorKey: 'fund_name',
+        header: () => '基金名称',
+        cell: info => info.getValue(),
+      },
+      {
+        accessorKey: 'share_class',
+        header: () => '份额类别',
+        cell: info => info.getValue(),
+      },
+      {
+        accessorKey: 'fund_code',
+        header: () => '基金代码',
+        cell: info => info.getValue(),
+      },
+      {
+        accessorKey: 'quota',
+        header: () => '额度',
+        cell: info => info.row.original.quota.toLocaleString(),
+      },
+      {
+        accessorKey: 'currency',
+        header: () => '币种',
+        cell: info => info.getValue(),
+      },
+      {
+        accessorKey: 'otc',
+        header: () => 'OTC',
+        cell: info => info.getValue(),
+      },
+      {
+        id: 'pdf',
+        header: () => '公告',
+        cell: info => (
+          <button
+            className="text-blue-600 hover:underline"
+            onClick={() => openPdf(info.row.original.pdf_id)}
+          >
+            📄
+          </button>
+        ),
+      },
+    ],
+    []
+  )
+
+  // React Table state for sorting
+  const [tableSorting, setTableSorting] = useState<SortingState>([])
+  const table = useReactTable({
+    data: data,
+    columns,
+    state: { sorting: tableSorting },
+    onSortingChange: setTableSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualSorting: false,
+  })
 
   return (
     <>
@@ -245,73 +330,95 @@ export default function Home() {
           {activeTab === 'funds' && (
             <>
               <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 flex flex-col md:flex-row gap-4 items-center">
-                <select
-                  className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
-                  value={filters.fund_company}
-                  onChange={e => {
-                    const newFilters = { ...filters, fund_company: e.target.value }
-                    setFilters(newFilters)
-                    fetchData(newFilters)
-                  }}
-                >
-                  <option value="">基金公司</option>
-                  {fundCompanies.map((company, index) => (
-                    <option key={index} value={company}>
-                      {company}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  list="fund-names"
-                  className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
-                  placeholder="基金名称"
-                  value={filters.fund_name}
-                  onChange={e => {
-                    const newFilters = { ...filters, fund_name: e.target.value }
-                    setFilters(newFilters)
-                    fetchData(newFilters)
-                  }}
-                  onFocus={e => e.target.select()}
-                />
-                <datalist id="fund-names">
-                  <option value="标普" />
-                  <option value="标普500ETF" />
-                  <option value="道琼斯" />
-                  <option value="精选" />
-                  <option value="黄金" />
-                  <option value="恒生科技" />
-                  <option value="恒生互联网" />
-                  <option value="日经" />
-                  <option value="纳斯达克100ETF" />
-                  <option value="生物科技" />
-                  <option value="石油" />
-                  <option value="债券" />
-                </datalist>
-                <select
-                  className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
-                  value={filters.country}
-                  onChange={e => {
-                    const newFilters = { ...filters, country: e.target.value }
-                    setFilters(newFilters)
-                    fetchData(newFilters)
-                  }}
-                >
-                  <option value="">地区</option>
-                  <option value="法国">法国</option>
-                  <option value="美国">美国</option>
-                  <option value="欧洲">欧洲</option>
-                  <option value="日本">日本</option>
-                  <option value="越南">越南</option>
-                  <option value="印度">印度</option>
-                  <option value="亚洲">亚洲</option>
-                  <option value="中国">中国</option>
-                </select>
-                <input
-                  className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg flex-1 transition"
-                  placeholder="基金代码"
-                  value={filters.fund_code}
-                  onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))}
-                />
+                {/* Fund Company Select */}
+                <div className="flex-1 min-w-[112px]">
+                  <Select
+                    options={[{ value: '', label: '基金公司' }, ...fundCompanies.map(c => ({ value: c, label: c }))]}
+                    value={fundCompanies.find(c => c === filters.fund_company) ? { value: filters.fund_company, label: filters.fund_company } : { value: '', label: '基金公司' }}
+                    onChange={option => {
+                      const newFilters = { ...filters, fund_company: option?.value || '' }
+                      setFilters(newFilters)
+                      fetchData(newFilters)
+                    }}
+                    isClearable
+                    placeholder="基金公司"
+                    classNamePrefix="react-select"
+                    menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                    styles={{ menuPortal: base => ({ ...base, zIndex: 1302 }) }}
+                  />
+                </div>
+                {/* Fund Name Creatable Select */}
+                <div className="flex-1 min-w-[234px]">
+                  <CreatableSelect
+                    options={[
+                      { value: '标普', label: '标普' },
+                      { value: '标普500ETF', label: '标普500ETF' },
+                      { value: '道琼斯', label: '道琼斯' },
+                      { value: '精选', label: '精选' },
+                      { value: '黄金', label: '黄金' },
+                      { value: '恒生科技', label: '恒生科技' },
+                      { value: '恒生互联网', label: '恒生互联网' },
+                      { value: '日经', label: '日经' },
+                      { value: '纳斯达克100ETF', label: '纳斯达克100ETF' },
+                      { value: '生物科技', label: '生物科技' },
+                      { value: '石油', label: '石油' },
+                      { value: '债券', label: '债券' },
+                    ]}
+                    value={filters.fund_name ? { value: filters.fund_name, label: filters.fund_name } : null}
+                    onChange={option => {
+                      const newFilters = { ...filters, fund_name: option?.value || '' }
+                      setFilters(newFilters)
+                      fetchData(newFilters)
+                    }}
+                    onCreateOption={inputValue => {
+                      const newFilters = { ...filters, fund_name: inputValue }
+                      setFilters(newFilters)
+                      fetchData(newFilters)
+                    }}
+                    isClearable
+                    placeholder="基金名称"
+                    classNamePrefix="react-select"
+                    menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                    styles={{ menuPortal: base => ({ ...base, zIndex: 1302 }) }}
+                  />
+                </div>
+                {/* Country Select */}
+                <div className="flex-1 min-w-[120px]">
+                  <Select
+                    options={[
+                      { value: '', label: '地区' },
+                      { value: '法国', label: '法国' },
+                      { value: '美国', label: '美国' },
+                      { value: '欧洲', label: '欧洲' },
+                      { value: '日本', label: '日本' },
+                      { value: '越南', label: '越南' },
+                      { value: '印度', label: '印度' },
+                      { value: '亚洲', label: '亚洲' },
+                      { value: '中国', label: '中国' },
+                    ]}
+                    value={filters.country ? { value: filters.country, label: filters.country } : { value: '', label: '地区' }}
+                    onChange={option => {
+                      const newFilters = { ...filters, country: option?.value || '' }
+                      setFilters(newFilters)
+                      fetchData(newFilters)
+                    }}
+                    isClearable
+                    placeholder="地区"
+                    classNamePrefix="react-select"
+                    menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
+                    styles={{ menuPortal: base => ({ ...base, zIndex: 1302 }) }}
+                  />
+                </div>
+                {/* Fund Code Input */}
+                <div className="flex-1 min-w-[120px] relative">
+                  <input
+                    className="border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg w-full pl-8 transition"
+                    placeholder="基金代码"
+                    value={filters.fund_code}
+                    onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))}
+                  />
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">#</span>
+                </div>
                 <button
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition"
                   onClick={handleSearch}
@@ -326,83 +433,123 @@ export default function Home() {
                   重置
                 </button>
               </div>
-              <div className="overflow-x-auto rounded-xl shadow-lg bg-white/90">
-                <table className="min-w-full text-sm md:text-base table-auto">
-                  <thead>
-                    <tr className="bg-indigo-100 text-indigo-800">
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('fund_company')}>
-                        基金公司 {sortKey === 'fund_company' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('fund_name')}>
-                        基金名称 {sortKey === 'fund_name' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('share_class')}>
-                        份额类别 {sortKey === 'share_class' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('fund_code')}>
-                        基金代码 {sortKey === 'fund_code' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('quota')}>
-                        额度 {(sortKey === 'quota' || (!sortKey && data.length > 0)) ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
-                      </th>
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('currency')}>
-                        币种 {sortKey === 'currency' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('otc')}>
-                        OTC {sortKey === 'otc' && (sortDirection === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="p-3 font-semibold text-left">公告</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 48 }}>
+                      <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 180 }, width: 'auto', height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'fund_company'}
+                          direction={sortKey === 'fund_company' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('fund_company')}
+                        >基金公司</TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortKey === 'fund_name'}
+                          direction={sortKey === 'fund_name' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('fund_name')}
+                        >基金名称</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto', height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'share_class'}
+                          direction={sortKey === 'share_class' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('share_class')}
+                        >类别</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 160 }, width: 'auto', height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'fund_code'}
+                          direction={sortKey === 'fund_code' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('fund_code')}
+                        >基金代码</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 160 }, width: 'auto', height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'quota'}
+                          direction={sortKey === 'quota' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('quota')}
+                        >额度</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto', height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'currency'}
+                          direction={sortKey === 'currency' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('currency')}
+                        >币种</TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortKey === 'otc'}
+                          direction={sortKey === 'otc' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('otc')}
+                        >OTC</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto', height: 48 }}>公告</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {loading ? (
-                      <tr>
-                        <td colSpan={8} className="text-center py-8 text-indigo-400">加载中...</td>
-                      </tr>
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" className="py-8 text-indigo-400">加载中...</TableCell>
+                      </TableRow>
                     ) : data.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="text-center py-8 text-gray-400">暂无数据</td>
-                      </tr>
+                      <TableRow>
+                        <TableCell colSpan={8} align="center" className="py-8 text-gray-400">暂无数据</TableCell>
+                      </TableRow>
                     ) : (
-                      pagedFunds.map((row, i) => (
-                        <tr key={i} className="hover:bg-indigo-50 transition">
-                          <td className="p-3 border-b border-gray-100 text-left">{row.fund_company}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{row.fund_name}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{row.share_class}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{row.fund_code}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{row.quota.toLocaleString()}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{row.currency}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{row.otc}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">
+                      data.slice((fundsPage-1)*ITEMS_PER_PAGE, fundsPage*ITEMS_PER_PAGE).map((row, i) => (
+                        <TableRow key={i} className="hover:bg-indigo-50 transition">
+                          <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 180 }, width: 'auto' }}>{row.fund_company}</TableCell>
+                          <TableCell>{row.fund_name}</TableCell>
+                          <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto' }}>{row.share_class}</TableCell>
+                          <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 160 }, width: 'auto' }}>{row.fund_code}</TableCell>
+                          <TableCell>{row.quota.toLocaleString()}</TableCell>
+                          <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto' }}>{row.currency}</TableCell>
+                          <TableCell>{row.otc}</TableCell>
+                          <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto' }}>
                             <button
                               className="text-blue-600 hover:underline"
                               onClick={() => openPdf(row.pdf_id)}
                             >
                               📄
                             </button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
-                  </tbody>
-                </table>
-                {/* Pagination for funds */}
-                {data.length > ITEMS_PER_PAGE && (
-                  <div className="flex justify-center items-center py-4 gap-2">
-                    <button onClick={() => setFundsPage(p => Math.max(1, p-1))} disabled={fundsPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
-                    {fundsTotalPages > 4 && fundsPage > 3 && (
-                      <span className="px-1">...</span>
-                    )}
-                    {getPageNumbers(fundsPage, fundsTotalPages).map(i => (
-                      <button key={i} onClick={()=>setFundsPage(i)} className={`px-2 py-1 rounded ${fundsPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
-                    ))}
-                    {fundsTotalPages > 4 && fundsPage < fundsTotalPages-2 && (
-                      <span className="px-1">...</span>
-                    )}
-                    <button onClick={() => setFundsPage(p => Math.min(fundsTotalPages, p+1))} disabled={fundsPage===fundsTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+                  </TableBody>
+                </Table>
+                {/* Custom centered pagination for funds */}
+                {data.length > 0 && (
+                  <div className="flex items-center w-full py-4 px-2 gap-2">
+                    <div className="flex-1" />
+                    <div className="flex justify-center items-center gap-2 flex-none mx-auto">
+                      {data.length > ITEMS_PER_PAGE && (
+                        <>
+                          <button onClick={() => setFundsPage(p => Math.max(1, p-1))} disabled={fundsPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
+                          {fundsTotalPages > 4 && fundsPage > 3 && (
+                            <span className="px-1">...</span>
+                          )}
+                          {getPageNumbers(fundsPage, fundsTotalPages).slice(0,4).map(i => (
+                            <button key={i} onClick={()=>setFundsPage(i)} className={`px-2 py-1 rounded ${fundsPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
+                          ))}
+                          {fundsTotalPages > 4 && fundsPage < fundsTotalPages-2 && (
+                            <span className="px-1">...</span>
+                          )}
+                          <button onClick={() => setFundsPage(p => Math.min(fundsTotalPages, p+1))} disabled={fundsPage===fundsTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex-1 flex justify-end">
+                      <span className="text-gray-500 text-sm md:text-base whitespace-nowrap">
+                        显示 {(fundsPage-1)*ITEMS_PER_PAGE+1} 到 {Math.min(fundsPage*ITEMS_PER_PAGE, data.length)} ，共 {data.length.toLocaleString()} 条
+                      </span>
+                    </div>
                   </div>
                 )}
-              </div>
+              </TableContainer>
             </>
           )}
           {activeTab === 'stocks' && (
@@ -433,58 +580,106 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <div className="overflow-x-auto rounded-xl shadow-lg bg-white/90">
-                <table className="min-w-full text-sm md:text-base table-auto">
-                  <thead>
-                    <tr className="bg-indigo-100 text-indigo-800">
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('ticker')}>Ticker {sortKey === 'ticker' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('name')}>Name {sortKey === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('lastClosingPrice')}>Last Closing Price {sortKey === 'lastClosingPrice' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('allTimeHigh')}>All Time High Price {sortKey === 'allTimeHigh' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('lastChangePercent')}>Last Change % {sortKey === 'lastChangePercent' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                      <th className="p-3 font-semibold text-left cursor-pointer" onClick={() => handleSort('changeFromAthPercent')}>Change % from ATH {sortKey === 'changeFromAthPercent' && (sortDirection === 'asc' ? '↑' : '↓')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 48 }}>
+                      <TableCell sx={{ height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'ticker'}
+                          direction={sortKey === 'ticker' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('ticker')}
+                        >Ticker</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'name'}
+                          direction={sortKey === 'name' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('name')}
+                        >Name</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'lastClosingPrice'}
+                          direction={sortKey === 'lastClosingPrice' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('lastClosingPrice')}
+                        >Last Closing Price</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'allTimeHigh'}
+                          direction={sortKey === 'allTimeHigh' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('allTimeHigh')}
+                        >All Time High Price</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'lastChangePercent'}
+                          direction={sortKey === 'lastChangePercent' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('lastChangePercent')}
+                        >Last Change %</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ height: 48 }}>
+                        <TableSortLabel
+                          active={sortKey === 'changeFromAthPercent'}
+                          direction={sortKey === 'changeFromAthPercent' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('changeFromAthPercent')}
+                        >Change % from ATH</TableSortLabel>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
                     {stockLoading ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-8 text-indigo-400">加载中...</td>
-                      </tr>
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" className="py-8 text-indigo-400">加载中...</TableCell>
+                      </TableRow>
                     ) : filteredStockData.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="text-center py-8 text-gray-400">暂无数据</td>
-                      </tr>
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" className="py-8 text-gray-400">暂无数据</TableCell>
+                      </TableRow>
                     ) : (
                       pagedStocks.map((stock, i) => (
-                        <tr key={i} className="hover:bg-indigo-50 transition">
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.ticker}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.name}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.lastClosingPrice}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.allTimeHigh}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.lastChangePercent}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.changeFromAthPercent}</td>
-                        </tr>
+                        <TableRow key={i} className="hover:bg-indigo-50 transition">
+                          <TableCell>{stock.ticker}</TableCell>
+                          <TableCell>{stock.name}</TableCell>
+                          <TableCell>{stock.lastClosingPrice}</TableCell>
+                          <TableCell>{stock.allTimeHigh}</TableCell>
+                          <TableCell>{stock.lastChangePercent}</TableCell>
+                          <TableCell>{stock.changeFromAthPercent}</TableCell>
+                        </TableRow>
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
                 {/* Pagination for stocks */}
-                {filteredStockData.length > ITEMS_PER_PAGE && (
-                  <div className="flex justify-center items-center py-4 gap-2">
-                    <button onClick={() => setStocksPage(p => Math.max(1, p-1))} disabled={stocksPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
-                    {stocksTotalPages > 4 && stocksPage > 3 && (
-                      <span className="px-1">...</span>
-                    )}
-                    {getPageNumbers(stocksPage, stocksTotalPages).map(i => (
-                      <button key={i} onClick={()=>setStocksPage(i)} className={`px-2 py-1 rounded ${stocksPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
-                    ))}
-                    {stocksTotalPages > 4 && stocksPage < stocksTotalPages-2 && (
-                      <span className="px-1">...</span>
-                    )}
-                    <button onClick={() => setStocksPage(p => Math.min(stocksTotalPages, p+1))} disabled={stocksPage===stocksTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+                {filteredStockData.length > 0 && (
+                  <div className="flex items-center w-full py-4 px-2 gap-2">
+                    <div className="flex-1" />
+                    <div className="flex justify-center items-center gap-2 flex-none mx-auto">
+                      {filteredStockData.length > ITEMS_PER_PAGE && (
+                        <>
+                          <button onClick={() => setStocksPage(p => Math.max(1, p-1))} disabled={stocksPage===1} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">上一页</button>
+                          {stocksTotalPages > 4 && stocksPage > 3 && (
+                            <span className="px-1">...</span>
+                          )}
+                          {getPageNumbers(stocksPage, stocksTotalPages).map(i => (
+                            <button key={i} onClick={()=>setStocksPage(i)} className={`px-2 py-1 rounded ${stocksPage===i ? 'bg-indigo-500 text-white' : 'bg-gray-100'}`}>{i}</button>
+                          ))}
+                          {stocksTotalPages > 4 && stocksPage < stocksTotalPages-2 && (
+                            <span className="px-1">...</span>
+                          )}
+                          <button onClick={() => setStocksPage(p => Math.min(stocksTotalPages, p+1))} disabled={stocksPage===stocksTotalPages} className="px-2 py-1 rounded bg-gray-200 disabled:opacity-50">下一页</button>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex-1 flex justify-end">
+                      <span className="text-gray-500 text-sm md:text-base whitespace-nowrap">
+                        显示 {(stocksPage-1)*ITEMS_PER_PAGE+1} 到 {Math.min(stocksPage*ITEMS_PER_PAGE, filteredStockData.length)} ，共 {filteredStockData.length.toLocaleString()} 条
+                      </span>
+                    </div>
                   </div>
                 )}
-              </div>
+              </TableContainer>
             </>
           )}
           {/* QA Section for both tabs */}
