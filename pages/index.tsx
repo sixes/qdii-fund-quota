@@ -225,7 +225,7 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-2">
         <div className="max-w-5xl mx-auto">
           <div className="mb-8 text-center">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-700 mb-2 tracking-tight">QDII基金额度查询</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-700 mb-2 tracking-tight">QDII基金申购额度查询</h1>
             <p className="text-gray-600 text-lg">快速查询各QDII基金额度，支持多条件筛选</p>
           </div>
           <div className="mb-4 flex justify-center">
@@ -428,7 +428,7 @@ export default function Home() {
                     dateFormat="MM-dd"
                     className="bg-transparent cursor-pointer text-right pr-7 ml-0"
                     ref={datePickerRef}
-                    calendarClassName="right-0"
+                    popperPlacement="bottom-end"
                     customInput={<DatePickerCustomInput />}
                   />
                 </div>
@@ -461,8 +461,8 @@ export default function Home() {
                           <td className="p-3 border-b border-gray-100 text-left">{stock.name}</td>
                           <td className="p-3 border-b border-gray-100 text-left">{stock.lastClosingPrice}</td>
                           <td className="p-3 border-b border-gray-100 text-left">{stock.allTimeHigh}</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.lastChangePercent}%</td>
-                          <td className="p-3 border-b border-gray-100 text-left">{stock.changeFromAthPercent}%</td>
+                          <td className="p-3 border-b border-gray-100 text-left">{stock.lastChangePercent}</td>
+                          <td className="p-3 border-b border-gray-100 text-left">{stock.changeFromAthPercent}</td>
                         </tr>
                       ))
                     )}
@@ -529,13 +529,13 @@ export default function Home() {
               <li>
                 <strong>投资纳斯达克指数或者标普500指数回报有多少？</strong><br />
 根据历史数据（截至2025年9月13日），纳斯达克100指数过去10年年化回报约18.56%，30年约13.44%，波动性较高，适合高风险偏好者。
-标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨19%，标普500涨15%；2025年初至今，分别涨30.12%和24.56%。
-相比之下，香港分红保险IRR约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，
-稳健型选标普500，或混合配置。若遇保险推销，无需焦虑 :)
+标普500指数过去10年年化回报约9–13%，30年约10.2%，行业分散，较稳定。2024年，纳斯达克100上涨24.88%，标普500涨25.02%；2025年初至今，分别涨14.66%和12.98%。
+相比之下，香港分红保险IRR(Internal Rate of Return)约3–4%，内地约2%，流动性差，适合低风险需求。指数基金长期回报远超分红保险，建议根据风险偏好选择：激进型选纳斯达克100，
+稳健型选标普500，或混合配置。若遇保险推销，无需焦虑 :) Anyway, they serve different needs:)
               </li>
               <li>
                 <strong>这些数据来自哪里？可靠吗？</strong><br />
-                数据均来自基金公司发布的官方公告。尽管如此，我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们会力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
+                数据均来自基金公司发布的官方公告。尽管如此，我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
               </li>
               <li>
                 <strong>这些数据多久更新一次？</strong><br />
@@ -548,7 +548,7 @@ export default function Home() {
               <li>
                 <strong>MEGA 7+包含哪些股票？</strong><br />
                 MEGA 7指纳斯达克100指数中的7只核心科技龙头（苹果、微软、亚马逊、谷歌、Meta、英伟达、特斯拉）。
-                本表中包含了港股部分核心科技龙头（腾讯、阿里巴巴等），故称为MEGA 7+。
+                本表中包含了MEGA 7杠杆ETF及港股部分核心科技龙头（腾讯、阿里巴巴等），故称为MEGA 7+。
               </li>
               <li>
                 <strong>MEGA 7+为啥没有9月11日以前的数据？</strong><br />
