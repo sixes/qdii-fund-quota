@@ -197,7 +197,7 @@ export default function Home() {
   // Pagination state
   const [fundsPage, setFundsPage] = useState(1)
   const [stocksPage, setStocksPage] = useState(1)
-  const ITEMS_PER_PAGE = 10
+  const ITEMS_PER_PAGE = 20
 
   // Reset page when filters or tab change
   useEffect(() => { setFundsPage(1) }, [filters, activeTab])
@@ -265,11 +265,6 @@ export default function Home() {
         cell: info => info.getValue(),
       },
       {
-        accessorKey: 'otc',
-        header: () => 'OTC',
-        cell: info => info.getValue(),
-      },
-      {
         id: 'pdf',
         header: () => '公告',
         cell: info => (
@@ -280,6 +275,11 @@ export default function Home() {
             📄
           </button>
         ),
+      },
+      {
+        accessorKey: 'otc',
+        header: () => 'OTC',
+        cell: info => info.getValue(),
       },
     ],
     []
@@ -341,7 +341,7 @@ export default function Home() {
                         setFilters(newFilters)
                         fetchData(newFilters)
                       }}
-                      renderInput={(params) => <TextField {...params} label="基金公司" variant="outlined" size="small" />}
+                      renderInput={(params) => <TextField {...params} label="基金公司" variant="outlined" size="small" className="text-xs sm:text-sm" />}
                       clearOnEscape
                     />
                   </div>
@@ -355,7 +355,7 @@ export default function Home() {
                         fetchData(newFilters)
                       }}
                       freeSolo
-                      renderInput={(params) => <TextField {...params} label="基金名称" variant="outlined" size="small" />}
+                      renderInput={(params) => <TextField {...params} label="基金名称" variant="outlined" size="small" className="text-xs sm:text-sm" />}
                       clearOnEscape
                     />
                   </div>
@@ -371,7 +371,7 @@ export default function Home() {
                         setFilters(newFilters)
                         fetchData(newFilters)
                       }}
-                      renderInput={(params) => <TextField {...params} label="地区" variant="outlined" size="small" />}
+                      renderInput={(params) => <TextField {...params} label="地区" variant="outlined" size="small" className="text-xs sm:text-sm" />}
                       clearOnEscape
                     />
                   </div>
@@ -380,6 +380,7 @@ export default function Home() {
                       label="基金代码"
                       variant="outlined"
                       size="small"
+                      className="text-xs sm:text-sm"
                       value={filters.fund_code}
                       onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))}
                       InputProps={{ startAdornment: <span style={{ color: '#9ca3af', marginRight: 4 }}>#</span> }}
@@ -390,13 +391,13 @@ export default function Home() {
                 {/* Buttons Row */}
                 <div className="flex gap-2 sm:gap-4">
                   <button
-                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold shadow transition text-sm sm:text-base"
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-2 py-2 rounded-md font-medium shadow transition text-xs sm:text-sm"
                     onClick={resetFilters}
                   >
                     重置
                   </button>
                   <button
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-semibold shadow transition text-sm sm:text-base"
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-2 rounded-md font-medium shadow transition text-xs sm:text-sm"
                     onClick={handleSearch}
                     disabled={loading}
                   >
@@ -405,59 +406,59 @@ export default function Home() {
                 </div>
               </div>
               <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
-                <Table size="small" sx={{ minWidth: 650 }}>
+                <Table size="small" sx={{ minWidth: { xs: 320, sm: 650 } }}>
                   <TableHead>
-                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 32 }}>
-                      <TableCell sx={{ m: 0, p: '0px', minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>
+                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: { xs: 28, sm: 32 } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'fund_company'}
                           direction={sortKey === 'fund_company' ? sortDirection : 'asc'}
                           onClick={() => handleSort('fund_company')}
                         >公司</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ m: 0, p: '0px', minWidth: 120, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 80, sm: 120 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'fund_name'}
                           direction={sortKey === 'fund_name' ? sortDirection : 'asc'}
                           onClick={() => handleSort('fund_name')}
                         >基金名称</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ m:0, p: '0px', minWidth: 85, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: 1 }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 60, sm: 85 }, fontSize: { xs: '0.6rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'fund_code'}
                           direction={sortKey === 'fund_code' ? sortDirection : 'asc'}
                           onClick={() => handleSort('fund_code')}
-                        >基金代码</TableSortLabel>
+                        >代码</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ m:0, p: '0px', minWidth: 70, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'quota'}
                           direction={sortKey === 'quota' ? sortDirection : 'desc'}
                           onClick={() => handleSort('quota')}
                         >额度</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ m: 0, p: '0px', minWidth: 50, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: 0 }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 35, sm: 50 }, fontSize: { xs: '0.6rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'share_class'}
                           direction={sortKey === 'share_class' ? sortDirection : 'asc'}
                           onClick={() => handleSort('share_class')}
                         >类别</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ m:0, p: '0px', minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'currency'}
                           direction={sortKey === 'currency' ? sortDirection : 'asc'}
                           onClick={() => handleSort('currency')}
                         >币种</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ m:0, p: '0px', minWidth: 55, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
+                      <TableCell sx={{ minWidth: { xs: 30, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>公告</TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 35, sm: 55 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'otc'}
                           direction={sortKey === 'otc' ? sortDirection : 'asc'}
                           onClick={() => handleSort('otc')}
                         >OTC</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>公告</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -471,22 +472,22 @@ export default function Home() {
                       </TableRow>
                     ) : (
                       data.slice((fundsPage-1)*ITEMS_PER_PAGE, fundsPage*ITEMS_PER_PAGE).map((row, i) => (
-                        <TableRow key={i} className="hover:bg-indigo-50 transition" sx={{ height: 24 }}>
-                          <TableCell sx={{ minWidth: 70, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>{row.fund_company}</TableCell>
-                          <TableCell sx={{ m: 0, p: '0px', fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.fund_name}</TableCell>
-                          <TableCell sx={{ m: 0, p: '0px', minWidth: 80, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>{row.fund_code}</TableCell>
-                          <TableCell sx={{ m: 0, p: '0px', fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.quota.toLocaleString()}</TableCell>
-                          <TableCell sx={{ m: 0, p: '0px', minWidth: 50, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>{row.share_class}</TableCell>
-                          <TableCell sx={{ minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.currency}</TableCell>
-                          <TableCell sx={{ minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.otc}</TableCell>
-                          <TableCell sx={{ py: 0, px: 1 }}>
+                        <TableRow key={i} className="hover:bg-indigo-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.fund_company}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.fund_name}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.fund_code}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.quota.toLocaleString()}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.share_class}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.currency}</TableCell>
+                          <TableCell sx={{ py: 0, px: { xs: 0.5, sm: 1 } }}>
                             <button
-                              className="text-blue-600 hover:underline text-lg"
+                              className="text-blue-600 hover:underline text-sm sm:text-base"
                               onClick={() => openPdf(row.pdf_id)}
                             >
                               📄
                             </button>
                           </TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.otc}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -550,50 +551,50 @@ export default function Home() {
                 </div>
               </div>
               <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
-                <Table size="small" sx={{ minWidth: 600 }}>
+                <Table size="small" sx={{ minWidth: { xs: 320, sm: 650 } }}>
                   <TableHead>
-                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 48 }}>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: { xs: 28, sm: 32 } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'ticker'}
                           direction={sortKey === 'ticker' ? sortDirection : 'asc'}
                           onClick={() => handleSort('ticker')}
                         >Ticker</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 80, sm: 120 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'name'}
                           direction={sortKey === 'name' ? sortDirection : 'asc'}
                           onClick={() => handleSort('name')}
                         >Name</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'changeFromAthPercent'}
+                          direction={sortKey === 'changeFromAthPercent' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('changeFromAthPercent')}
+                        >Change % from ATH</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 60, sm: 85 }, fontSize: { xs: '0.6rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'lastClosingPrice'}
                           direction={sortKey === 'lastClosingPrice' ? sortDirection : 'asc'}
                           onClick={() => handleSort('lastClosingPrice')}
                         >Last Closing Price</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                        <TableSortLabel
-                          active={sortKey === 'allTimeHigh'}
-                          direction={sortKey === 'allTimeHigh' ? sortDirection : 'asc'}
-                          onClick={() => handleSort('allTimeHigh')}
-                        >All Time High Price</TableSortLabel>
-                      </TableCell>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 35, sm: 50 }, fontSize: { xs: '0.6rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
                           active={sortKey === 'lastChangePercent'}
                           direction={sortKey === 'lastChangePercent' ? sortDirection : 'asc'}
                           onClick={() => handleSort('lastChangePercent')}
                         >Last Change %</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel
-                          active={sortKey === 'changeFromAthPercent'}
-                          direction={sortKey === 'changeFromAthPercent' ? sortDirection : 'asc'}
-                          onClick={() => handleSort('changeFromAthPercent')}
-                        >Change % from ATH</TableSortLabel>
+                          active={sortKey === 'allTimeHigh'}
+                          direction={sortKey === 'allTimeHigh' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('allTimeHigh')}
+                        >All Time High Price</TableSortLabel>
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -608,13 +609,13 @@ export default function Home() {
                       </TableRow>
                     ) : (
                       pagedStocks.map((stock, i) => (
-                        <TableRow key={i} className="hover:bg-indigo-50 transition">
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.ticker}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.name}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.lastClosingPrice}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.allTimeHigh}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.lastChangePercent}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.changeFromAthPercent}</TableCell>
+                        <TableRow key={i} className="hover:bg-indigo-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.ticker}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.name}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.changeFromAthPercent}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.lastClosingPrice}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.lastChangePercent}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{stock.allTimeHigh}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -622,9 +623,9 @@ export default function Home() {
                 </Table>
                 {/* Pagination for stocks */}
                 {filteredStockData.length > 0 && (
-                  <div className="flex items-center w-full py-4 px-2 gap-2">
-                    <div className="flex-1" />
-                    <div className="flex justify-center items-center gap-2 flex-none mx-auto">
+                  <div className="relative flex flex-row flex-nowrap items-center w-full py-4 px-2 gap-2">
+                    <div className="flex-1 order-2 sm:order-1" />
+                    <div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-2 flex-none mx-auto order-1 sm:order-2">
                       {filteredStockData.length > ITEMS_PER_PAGE && (
                         <Pagination
                           count={stocksTotalPages}
@@ -632,13 +633,14 @@ export default function Home() {
                           onChange={(_, value) => setStocksPage(value)}
                           color="primary"
                           shape="rounded"
-                          siblingCount={1}
+                          siblingCount={0}
                           boundaryCount={1}
+                          size="small"
                         />
                       )}
                     </div>
-                    <div className="flex-1 flex justify-end">
-                      <span className="text-gray-500 text-sm md:text-base whitespace-nowrap">
+                    <div className="flex-1 flex justify-end order-3">
+                      <span className="text-gray-500 text-xs sm:text-sm md:text-base whitespace-nowrap">
                         显示 {(stocksPage-1)*ITEMS_PER_PAGE+1} 到 {Math.min(stocksPage*ITEMS_PER_PAGE, filteredStockData.length)} ，共 {filteredStockData.length.toLocaleString()} 条
                       </span>
                     </div>
