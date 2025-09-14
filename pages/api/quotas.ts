@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (country) whereParts.push(`fund_name LIKE '%${country}%'`)
 
   const whereClause = whereParts.length > 0 ? whereParts.join(' AND ') : '1=1'
-  let quotas = await prisma.$queryRawUnsafe(`SELECT * FROM fund_quota WHERE ${whereClause}`)
+  let quotas = await prisma.$queryRawUnsafe(`SELECT * FROM fund_quota WHERE ${whereClause}`) as any[]
 
   if (fund_name) {
     const fuse = new Fuse(quotas, {

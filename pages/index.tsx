@@ -51,6 +51,12 @@ export default function Home() {
     return [...data].sort((a, b) => {
       let aVal = a[key]
       let bVal = b[key]
+      // Special handling for quota in fund tab: convert USD to RMB
+      if (activeTab === 'funds' && key === 'quota') {
+        const aQuota = a.currency === 'USD' ? Number(a.quota) * 7 : Number(a.quota)
+        const bQuota = b.currency === 'USD' ? Number(b.quota) * 7 : Number(b.quota)
+        return direction === 'asc' ? aQuota - bQuota : bQuota - aQuota
+      }
       if (typeof aVal === 'string' && !isNaN(Number(aVal))) {
         aVal = Number(aVal)
         bVal = Number(bVal)
@@ -290,7 +296,7 @@ export default function Home() {
                     fetchData(newFilters)
                   }}
                 >
-                  <option value="">国家</option>
+                  <option value="">地区</option>
                   <option value="法国">法国</option>
                   <option value="美国">美国</option>
                   <option value="欧洲">欧洲</option>
@@ -328,7 +334,7 @@ export default function Home() {
                         基金公司 {sortKey === 'fund_company' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </th>
                       <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('fund_name')}>
-                        基金简称 {sortKey === 'fund_name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        基金名称 {sortKey === 'fund_name' && (sortDirection === 'asc' ? '↑' : '↓')}
                       </th>
                       <th className="p-3 font-semibold text-left cursor-pointer hover:bg-indigo-200" onClick={() => handleSort('share_class')}>
                         份额类别 {sortKey === 'share_class' && (sortDirection === 'asc' ? '↑' : '↓')}
@@ -529,7 +535,7 @@ export default function Home() {
               </li>
               <li>
                 <strong>这些数据来自哪里？可靠吗？</strong><br />
-                数据均来自基金公司发布的官方公告。我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们会力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
+                数据均来自基金公司发布的官方公告。尽管如此，我们发现部分公告偶有数据错误，可能导致列表中个别数据不准确。我们会力求数据准确，若发现错误，欢迎通过下方表格或交流群反馈。
               </li>
               <li>
                 <strong>这些数据多久更新一次？</strong><br />
@@ -538,6 +544,11 @@ export default function Home() {
               <li>
                 <strong>MEGA 7+是用来干什么的？</strong><br />
                 方便每日观察美股/港股核心科技龙头的表现，数据与QDII额度整合，便于投资决策。
+              </li>
+              <li>
+                <strong>MEGA 7+包含哪些股票？</strong><br />
+                MEGA 7指纳斯达克100指数中的7只核心科技龙头（苹果、微软、亚马逊、谷歌、Meta、英伟达、特斯拉）。
+                本表中包含了港股部分核心科技龙头（腾讯、阿里巴巴等），故称为MEGA 7+。
               </li>
               <li>
                 <strong>MEGA 7+为啥没有9月11日以前的数据？</strong><br />
