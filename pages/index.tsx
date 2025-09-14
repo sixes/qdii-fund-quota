@@ -245,11 +245,6 @@ export default function Home() {
         cell: info => info.getValue(),
       },
       {
-        accessorKey: 'share_class',
-        header: () => '份额类别',
-        cell: info => info.getValue(),
-      },
-      {
         accessorKey: 'fund_code',
         header: () => '基金代码',
         cell: info => info.getValue(),
@@ -258,6 +253,11 @@ export default function Home() {
         accessorKey: 'quota',
         header: () => '额度',
         cell: info => info.row.original.quota.toLocaleString(),
+      },
+      {
+        accessorKey: 'share_class',
+        header: () => '份额类别',
+        cell: info => info.getValue(),
       },
       {
         accessorKey: 'currency',
@@ -313,15 +313,15 @@ export default function Home() {
             <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-700 mb-2 tracking-tight">QDII基金申购额度查询</h1>
             <p className="text-gray-600 text-lg">快速查询各QDII基金额度，支持多条件筛选</p>
           </div>
-          <div className="mb-4 flex justify-center">
+          <div className="mb-4 flex justify-center gap-2 sm:gap-4">
             <button
-              className={`px-4 py-2 rounded-lg font-semibold transition ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
               onClick={() => setActiveTab('funds')}
             >
               基金额度
             </button>
             <button
-              className={`px-4 py-2 rounded-lg font-semibold transition ml-4 ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
               onClick={() => setActiveTab('stocks')}
             >
               Mega 7+ 股票
@@ -329,130 +329,135 @@ export default function Home() {
           </div>
           {activeTab === 'funds' && (
             <>
-              <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 flex flex-col md:flex-row gap-4 items-center">
-                {/* Fund Company Autocomplete */}
-                <div className="flex-1 min-w-[112px]">
-                  <Autocomplete
-                    options={['', ...fundCompanies]}
-                    value={filters.fund_company}
-                    onChange={(_, value) => {
-                      const newFilters = { ...filters, fund_company: value || '' }
-                      setFilters(newFilters)
-                      fetchData(newFilters)
-                    }}
-                    renderInput={(params) => <TextField {...params} label="基金公司" variant="outlined" size="small" />}
-                    clearOnEscape
-                  />
+              <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex flex-col gap-4 items-stretch">
+                {/* Company and Fund Name Row */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Autocomplete
+                      options={['', ...fundCompanies]}
+                      value={filters.fund_company}
+                      onChange={(_, value) => {
+                        const newFilters = { ...filters, fund_company: value || '' }
+                        setFilters(newFilters)
+                        fetchData(newFilters)
+                      }}
+                      renderInput={(params) => <TextField {...params} label="基金公司" variant="outlined" size="small" />}
+                      clearOnEscape
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Autocomplete
+                      options={['标普', '标普500ETF', '道琼斯', '精选', '黄金', '恒生科技', '恒生互联网', '日经', '纳斯达克100ETF', '生物科技', '石油', '债券']}
+                      value={filters.fund_name}
+                      onChange={(_, value) => {
+                        const newFilters = { ...filters, fund_name: value || '' }
+                        setFilters(newFilters)
+                        fetchData(newFilters)
+                      }}
+                      freeSolo
+                      renderInput={(params) => <TextField {...params} label="基金名称" variant="outlined" size="small" />}
+                      clearOnEscape
+                    />
+                  </div>
                 </div>
-                {/* Fund Name Autocomplete with free solo */}
-                <div className="flex-1 min-w-[234px]">
-                  <Autocomplete
-                    options={['标普', '标普500ETF', '道琼斯', '精选', '黄金', '恒生科技', '恒生互联网', '日经', '纳斯达克100ETF', '生物科技', '石油', '债券']}
-                    value={filters.fund_name}
-                    onChange={(_, value) => {
-                      const newFilters = { ...filters, fund_name: value || '' }
-                      setFilters(newFilters)
-                      fetchData(newFilters)
-                    }}
-                    freeSolo
-                    renderInput={(params) => <TextField {...params} label="基金名称" variant="outlined" size="small" />}
-                    clearOnEscape
-                  />
+                {/* Country and Fund Code Row */}
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Autocomplete
+                      options={['', '法国', '美国', '欧洲', '日本', '越南', '印度', '亚洲', '中国']}
+                      value={filters.country}
+                      onChange={(_, value) => {
+                        const newFilters = { ...filters, country: value || '' }
+                        setFilters(newFilters)
+                        fetchData(newFilters)
+                      }}
+                      renderInput={(params) => <TextField {...params} label="地区" variant="outlined" size="small" />}
+                      clearOnEscape
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <TextField
+                      label="基金代码"
+                      variant="outlined"
+                      size="small"
+                      value={filters.fund_code}
+                      onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))}
+                      InputProps={{ startAdornment: <span style={{ color: '#9ca3af', marginRight: 4 }}>#</span> }}
+                      fullWidth
+                    />
+                  </div>
                 </div>
-                {/* Country Autocomplete */}
-                <div className="flex-1 min-w-[120px]">
-                  <Autocomplete
-                    options={['', '法国', '美国', '欧洲', '日本', '越南', '印度', '亚洲', '中国']}
-                    value={filters.country}
-                    onChange={(_, value) => {
-                      const newFilters = { ...filters, country: value || '' }
-                      setFilters(newFilters)
-                      fetchData(newFilters)
-                    }}
-                    renderInput={(params) => <TextField {...params} label="地区" variant="outlined" size="small" />}
-                    clearOnEscape
-                  />
+                {/* Buttons Row */}
+                <div className="flex gap-2 sm:gap-4">
+                  <button
+                    className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold shadow transition text-sm sm:text-base"
+                    onClick={resetFilters}
+                  >
+                    重置
+                  </button>
+                  <button
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-semibold shadow transition text-sm sm:text-base"
+                    onClick={handleSearch}
+                    disabled={loading}
+                  >
+                    {loading ? '查询中...' : '查询'}
+                  </button>
                 </div>
-                {/* Fund Code Input */}
-                <div className="flex-1 min-w-[120px] relative">
-                  <TextField
-                    label="基金代码"
-                    variant="outlined"
-                    size="small"
-                    value={filters.fund_code}
-                    onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))}
-                    InputProps={{ startAdornment: <span style={{ color: '#9ca3af', marginRight: 4 }}>#</span> }}
-                    fullWidth
-                  />
-                </div>
-                <button
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition"
-                  onClick={handleSearch}
-                  disabled={loading}
-                >
-                  {loading ? '查询中...' : '查询'}
-                </button>
-                <button
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition"
-                  onClick={resetFilters}
-                >
-                  重置
-                </button>
               </div>
-              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90">
-                <Table size="small">
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
+                <Table size="small" sx={{ minWidth: 650 }}>
                   <TableHead>
-                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 48 }}>
-                      <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 180 }, width: 'auto', height: 48 }}>
+                    <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 32 }}>
+                      <TableCell sx={{ m: 0, p: '0px', minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>
                         <TableSortLabel
                           active={sortKey === 'fund_company'}
                           direction={sortKey === 'fund_company' ? sortDirection : 'asc'}
                           onClick={() => handleSort('fund_company')}
-                        >基金公司</TableSortLabel>
+                        >公司</TableSortLabel>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ m: 0, p: '0px', minWidth: 120, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
                         <TableSortLabel
                           active={sortKey === 'fund_name'}
                           direction={sortKey === 'fund_name' ? sortDirection : 'asc'}
                           onClick={() => handleSort('fund_name')}
                         >基金名称</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto', height: 48 }}>
-                        <TableSortLabel
-                          active={sortKey === 'share_class'}
-                          direction={sortKey === 'share_class' ? sortDirection : 'asc'}
-                          onClick={() => handleSort('share_class')}
-                        >类别</TableSortLabel>
-                      </TableCell>
-                      <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 160 }, width: 'auto', height: 48 }}>
+                      <TableCell sx={{ m:0, p: '0px', minWidth: 85, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: 1 }}>
                         <TableSortLabel
                           active={sortKey === 'fund_code'}
                           direction={sortKey === 'fund_code' ? sortDirection : 'asc'}
                           onClick={() => handleSort('fund_code')}
                         >基金代码</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 160 }, width: 'auto', height: 48 }}>
+                      <TableCell sx={{ m:0, p: '0px', minWidth: 70, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
                         <TableSortLabel
                           active={sortKey === 'quota'}
                           direction={sortKey === 'quota' ? sortDirection : 'desc'}
                           onClick={() => handleSort('quota')}
                         >额度</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto', height: 48 }}>
+                      <TableCell sx={{ m: 0, p: '0px', minWidth: 50, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: 0 }}>
+                        <TableSortLabel
+                          active={sortKey === 'share_class'}
+                          direction={sortKey === 'share_class' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('share_class')}
+                        >类别</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m:0, p: '0px', minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
                         <TableSortLabel
                           active={sortKey === 'currency'}
                           direction={sortKey === 'currency' ? sortDirection : 'asc'}
                           onClick={() => handleSort('currency')}
                         >币种</TableSortLabel>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ m:0, p: '0px', minWidth: 55, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>
                         <TableSortLabel
                           active={sortKey === 'otc'}
                           direction={sortKey === 'otc' ? sortDirection : 'asc'}
                           onClick={() => handleSort('otc')}
                         >OTC</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto', height: 48 }}>公告</TableCell>
+                      <TableCell sx={{ minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>公告</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -466,17 +471,17 @@ export default function Home() {
                       </TableRow>
                     ) : (
                       data.slice((fundsPage-1)*ITEMS_PER_PAGE, fundsPage*ITEMS_PER_PAGE).map((row, i) => (
-                        <TableRow key={i} className="hover:bg-indigo-50 transition">
-                          <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 180 }, width: 'auto' }}>{row.fund_company}</TableCell>
-                          <TableCell>{row.fund_name}</TableCell>
-                          <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto' }}>{row.share_class}</TableCell>
-                          <TableCell sx={{ minWidth: { xs: 80, md: 120 }, maxWidth: { xs: 120, md: 160 }, width: 'auto' }}>{row.fund_code}</TableCell>
-                          <TableCell>{row.quota.toLocaleString()}</TableCell>
-                          <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto' }}>{row.currency}</TableCell>
-                          <TableCell>{row.otc}</TableCell>
-                          <TableCell sx={{ minWidth: { xs: 60, md: 90 }, maxWidth: { xs: 90, md: 120 }, width: 'auto' }}>
+                        <TableRow key={i} className="hover:bg-indigo-50 transition" sx={{ height: 24 }}>
+                          <TableCell sx={{ minWidth: 70, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>{row.fund_company}</TableCell>
+                          <TableCell sx={{ m: 0, p: '0px', fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.fund_name}</TableCell>
+                          <TableCell sx={{ m: 0, p: '0px', minWidth: 80, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>{row.fund_code}</TableCell>
+                          <TableCell sx={{ m: 0, p: '0px', fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.quota.toLocaleString()}</TableCell>
+                          <TableCell sx={{ m: 0, p: '0px', minWidth: 50, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 1 }}>{row.share_class}</TableCell>
+                          <TableCell sx={{ minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.currency}</TableCell>
+                          <TableCell sx={{ minWidth: 60, fontSize: { xs: '0.75rem', sm: '0.875rem' }, py: 0, px: 0 }}>{row.otc}</TableCell>
+                          <TableCell sx={{ py: 0, px: 1 }}>
                             <button
-                              className="text-blue-600 hover:underline"
+                              className="text-blue-600 hover:underline text-lg"
                               onClick={() => openPdf(row.pdf_id)}
                             >
                               📄
@@ -489,9 +494,9 @@ export default function Home() {
                 </Table>
                 {/* Pagination for funds */}
                 {data.length > 0 && (
-                  <div className="flex items-center w-full py-4 px-2 gap-2">
-                    <div className="flex-1" />
-                    <div className="flex justify-center items-center gap-2 flex-none mx-auto">
+                  <div className="relative flex flex-row flex-nowrap items-center w-full py-4 px-2 gap-2">
+                    <div className="flex-1 order-2 sm:order-1" />
+                    <div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-2 flex-none mx-auto order-1 sm:order-2">
                       {data.length > ITEMS_PER_PAGE && (
                         <Pagination
                           count={fundsTotalPages}
@@ -499,13 +504,14 @@ export default function Home() {
                           onChange={(_, value) => setFundsPage(value)}
                           color="primary"
                           shape="rounded"
-                          siblingCount={1}
+                          siblingCount={0}
                           boundaryCount={1}
+                          size="small"
                         />
                       )}
                     </div>
-                    <div className="flex-1 flex justify-end">
-                      <span className="text-gray-500 text-sm md:text-base whitespace-nowrap">
+                    <div className="flex-1 flex justify-end order-3">
+                      <span className="text-gray-500 text-xs sm:text-sm md:text-base whitespace-nowrap">
                         显示 {(fundsPage-1)*ITEMS_PER_PAGE+1} 到 {Math.min(fundsPage*ITEMS_PER_PAGE, data.length)} ，共 {data.length.toLocaleString()} 条
                       </span>
                     </div>
@@ -516,72 +522,73 @@ export default function Home() {
           )}
           {activeTab === 'stocks' && (
             <>
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center justify-end w-full gap-2">
-                  <span className={`font-semibold ${stockMarket === 'US' ? 'text-indigo-700' : 'text-gray-500'}`}>美股</span>
+              <div className="mb-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <div className="w-full sm:w-auto" />
+                <div className="flex items-center justify-end w-full sm:w-auto gap-2">
+                  <span className={`font-semibold text-sm ${stockMarket === 'US' ? 'text-indigo-700' : 'text-gray-500'}`}>美股</span>
                   <Switch
                     checked={stockMarket === 'HK'}
                     onChange={checked => setStockMarket(checked ? 'HK' : 'US')}
-                    className={`${stockMarket === 'HK' ? 'bg-indigo-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors ml-0`}
+                    className={`${stockMarket === 'HK' ? 'bg-indigo-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                   >
                     <span
                       className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${stockMarket === 'HK' ? 'translate-x-5' : 'translate-x-1'}`}
                     />
                   </Switch>
-                  <span className={`ml-0 font-semibold ${stockMarket === 'HK' ? 'text-indigo-700' : 'text-gray-500'}`}>港股</span>
+                  <span className={`font-semibold text-sm ${stockMarket === 'HK' ? 'text-indigo-700' : 'text-gray-500'}`}>港股</span>
                   <DatePicker
                     selected={selectedDate}
                     onChange={handleDateChange}
                     minDate={minDate}
                     maxDate={maxDate}
                     dateFormat="MM-dd"
-                    className="bg-transparent cursor-pointer text-right pr-7 ml-0"
+                    className="bg-transparent cursor-pointer text-right text-sm w-16"
                     ref={datePickerRef}
                     popperPlacement="bottom-end"
                     customInput={<DatePickerCustomInput />}
                   />
                 </div>
               </div>
-              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90">
-                <Table size="small">
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
+                <Table size="small" sx={{ minWidth: 600 }}>
                   <TableHead>
                     <TableRow className="bg-indigo-100 text-indigo-800" sx={{ height: 48 }}>
-                      <TableCell sx={{ height: 48 }}>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         <TableSortLabel
                           active={sortKey === 'ticker'}
                           direction={sortKey === 'ticker' ? sortDirection : 'asc'}
                           onClick={() => handleSort('ticker')}
                         >Ticker</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ height: 48 }}>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         <TableSortLabel
                           active={sortKey === 'name'}
                           direction={sortKey === 'name' ? sortDirection : 'asc'}
                           onClick={() => handleSort('name')}
                         >Name</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ height: 48 }}>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         <TableSortLabel
                           active={sortKey === 'lastClosingPrice'}
                           direction={sortKey === 'lastClosingPrice' ? sortDirection : 'asc'}
                           onClick={() => handleSort('lastClosingPrice')}
                         >Last Closing Price</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ height: 48 }}>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         <TableSortLabel
                           active={sortKey === 'allTimeHigh'}
                           direction={sortKey === 'allTimeHigh' ? sortDirection : 'asc'}
                           onClick={() => handleSort('allTimeHigh')}
                         >All Time High Price</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ height: 48 }}>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         <TableSortLabel
                           active={sortKey === 'lastChangePercent'}
                           direction={sortKey === 'lastChangePercent' ? sortDirection : 'asc'}
                           onClick={() => handleSort('lastChangePercent')}
                         >Last Change %</TableSortLabel>
                       </TableCell>
-                      <TableCell sx={{ height: 48 }}>
+                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                         <TableSortLabel
                           active={sortKey === 'changeFromAthPercent'}
                           direction={sortKey === 'changeFromAthPercent' ? sortDirection : 'asc'}
@@ -602,12 +609,12 @@ export default function Home() {
                     ) : (
                       pagedStocks.map((stock, i) => (
                         <TableRow key={i} className="hover:bg-indigo-50 transition">
-                          <TableCell>{stock.ticker}</TableCell>
-                          <TableCell>{stock.name}</TableCell>
-                          <TableCell>{stock.lastClosingPrice}</TableCell>
-                          <TableCell>{stock.allTimeHigh}</TableCell>
-                          <TableCell>{stock.lastChangePercent}</TableCell>
-                          <TableCell>{stock.changeFromAthPercent}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.ticker}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.name}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.lastClosingPrice}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.allTimeHigh}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.lastChangePercent}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{stock.changeFromAthPercent}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -641,9 +648,9 @@ export default function Home() {
             </>
           )}
           {/* QA Section for both tabs */}
-          <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">
-            <h2 className="text-xl font-semibold text-indigo-700 mb-4">常见问题（QA）</h2>
-            <ol className="list-decimal list-inside space-y-2 text-gray-700 text-base">
+          <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-4 sm:p-6 mb-8 mt-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-indigo-700 mb-4">常见问题（QA）</h2>
+            <ol className="list-decimal list-inside space-y-2 text-gray-700 text-sm sm:text-base">
               <li>
                 <strong>什么是QDII基金？</strong><br />
                 QDII基金是指合格境内机构投资者（Qualified Domestic Institutional Investor）通过境内基金公司募集资金，投资于境外市场的基金产品。
