@@ -41,15 +41,25 @@ export default function Home() {
   const [stockLoading, setStockLoading] = useState(false);
   const [stockMarket, setStockMarket] = useState<'US' | 'HK'>('US');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
 
   const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'));
 
   useEffect(() => {
-    fetchData();
+    console.log('🚀 Initial setup useEffect triggered');
     setFundCompanies(companyList);
+    setIsInitialized(true);
+    console.log('✅ Initial setup completed, isInitialized set to true');
   }, []);
 
   const fetchData = async (customFilters = filters) => {
+    console.log('📊 fetchData called with:', { activeTab, customFilters, isInitialized });
+    if (activeTab !== 'funds') {
+      console.log('❌ fetchData skipped: not on funds tab');
+      return;
+    }
+    console.log('🔄 Starting fetchData request...');
     setLoading(true);
     const params = new URLSearchParams();
     Object.entries(customFilters).forEach(([k, v]) => { if (v) params.append(k, v); });
@@ -57,6 +67,7 @@ export default function Home() {
     const fetchedData = await res.json();
     setData(sortData(fetchedData, fundSortKey, fundSortDirection));
     setLoading(false);
+    console.log('✅ fetchData completed');
   };
 
   const sortData = (data: any[], key: string, direction: 'asc' | 'desc') => {
@@ -122,6 +133,12 @@ export default function Home() {
   };
 
   const fetchStockData = async () => {
+    console.log('📈 fetchStockData called with:', { activeTab, selectedDate, stockMarket, isInitialized });
+    if (activeTab !== 'stocks') {
+      console.log('❌ fetchStockData skipped: not on stocks tab');
+      return;
+    }
+    console.log('🔄 Starting fetchStockData request...');
     setStockLoading(true);
     const formattedDate = selectedDate.toISOString().split('T')[0];
     const res = await fetch(`/api/stocks?date=${formattedDate}`);
@@ -134,36 +151,7 @@ export default function Home() {
     }
     setStockData(sortedStockData);
     setStockLoading(false);
-  };
-
-  useEffect(() => {
-    if (activeTab === 'stocks') {
-      fetchStockData();
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (activeTab === 'stocks') {
-      fetchStockData();
-    }
-  }, [selectedDate]);
-
-  useEffect(() => {
-    if (activeTab === 'stocks' && stockData.length > 0) {
-      // do nothing, handled by fetchStockData
-    } else if (activeTab === 'funds' && data.length > 0) {
-      setData(sortData(data, sortKey, sortDirection));
-    }
-  }, [sortKey, sortDirection]);
-
-  const formatDate = (date: Date) => {
-    return date.getDate().toString().padStart(2, '0');
-  };
-
-  const handleDateChange = (date: Date | null) => {
-    if (date) {
-      setSelectedDate(date);
-    }
+    console.log('✅ fetchStockData completed');
   };
 
   const minDate = new Date('2025-09-12');
@@ -199,17 +187,56 @@ export default function Home() {
     return [current-1, current, current+1, current+2];
   }
 
+  // Initial data load and tab switching
   useEffect(() => {
+    console.log('🎯 Tab switching useEffect triggered:', { activeTab, isInitialized, hasLoadedInitialData });
+    if (!isInitialized) {
+      console.log('⏳ Skipping: not initialized yet');
+      return;
+    }
+    
     if (activeTab === 'funds') {
+      console.log('💰 Switching to funds tab');
       setSortKey(fundSortKey);
       setSortDirection(fundSortDirection);
-      fetchData();
+      fetchData(filters);
+      setHasLoadedInitialData(true);
     } else if (activeTab === 'stocks') {
+      console.log('📈 Switching to stocks tab');
       setSortKey(stockSortKey);
       setSortDirection(stockSortDirection);
       fetchStockData();
+      setHasLoadedInitialData(true);
     }
-  }, [activeTab]);
+  }, [activeTab, isInitialized]);
+
+  // Filter changes for funds only (skip if not initialized, not on funds tab, or initial load)
+  useEffect(() => {
+    console.log('🔍 Filters useEffect triggered:', { filters, isInitialized, activeTab, hasLoadedInitialData });
+    if (!isInitialized || activeTab !== 'funds' || !hasLoadedInitialData) {
+      console.log('⏳ Skipping filters useEffect: not ready, not on funds tab, or initial load');
+      return;
+    }
+    console.log('🔍 Fetching data due to filter change');
+    fetchData(filters);
+  }, [filters, isInitialized]);
+
+  // Stock parameters changes (skip if not initialized, not on stocks tab, or initial load)
+  useEffect(() => {
+    console.log('📊 Stock params useEffect triggered:', { selectedDate, stockMarket, isInitialized, activeTab, hasLoadedInitialData });
+    if (!isInitialized || activeTab !== 'stocks' || !hasLoadedInitialData) {
+      console.log('⏳ Skipping stock params useEffect: not ready, not on stocks tab, or initial load');
+      return;
+    }
+    console.log('📊 Fetching stock data due to parameter change');
+    fetchStockData();
+  }, [selectedDate, stockMarket, isInitialized]);
+
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
 
   return (
     <>
