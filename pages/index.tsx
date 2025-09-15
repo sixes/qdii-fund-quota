@@ -140,10 +140,16 @@ export default function Home() {
       return;
     }
     console.log('🔄 Starting fetchStockData request...');
-    setStockLoading(true);
-    const formattedDate = selectedDate.toISOString().split('T')[0];
+    setStockLoading(true); // Re-added to indicate loading state
+    console.log('🕒 Original selectedDate:', selectedDate);
+
+    // Simplify date formatting using toLocaleDateString
+    const formattedDate = selectedDate.toLocaleDateString('en-CA'); // Format as YYYY-MM-DD
+
+    console.log('📅 Formatted date for API:', formattedDate);
     const res = await fetch(`/api/stocks?date=${formattedDate}`);
     const fetchedStockData = await res.json();
+    console.log('📊 Fetched stock data:', fetchedStockData);
     let sortedStockData: any[] = [];
     if (Array.isArray(fetchedStockData)) {
       sortedStockData = sortData(fetchedStockData, stockSortKey, stockSortDirection);
@@ -565,7 +571,10 @@ export default function Home() {
                       </TableRow>
                     ) : filteredStockData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center" className="py-8 text-gray-400">暂无数据</TableCell>
+                        <TableCell colSpan={6} align="center" className="py-8 text-gray-400">
+                          暂无数据。<br />
+                          T日数据于T+1日8:30更新。<br />选择右上角日历可查看其他日期数据。
+                        </TableCell>
                       </TableRow>
                     ) : (
                       pagedStocks.map((stock, i) => (
