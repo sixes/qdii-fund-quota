@@ -22,6 +22,7 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function Home() {
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' });
@@ -106,7 +107,7 @@ export default function Home() {
     setSortDirection(newDirection);
   };
 
-  const handleSearch = () => fetchData();
+  const handleSearch = () => fetchData(filters);
 
   const resetFilters = () => {
     const clearedFilters = { fund_company: '', fund_name: '', fund_code: '', country: '' };
@@ -293,9 +294,12 @@ export default function Home() {
                       options={['标普', '标普500ETF', '道琼斯', '精选', '黄金', '恒生科技', '恒生互联网', '日经', '纳斯达克100ETF', '生物科技', '石油', '债券']}
                       value={filters.fund_name}
                       onChange={(_, value) => {
-                        const newFilters = { ...filters, fund_name: value || '' }
-                        setFilters(newFilters)
-                        fetchData(newFilters)
+                        const newFilters = { ...filters, fund_name: value || '' };
+                        setFilters(newFilters);
+                      }}
+                      onInputChange={(_, value) => {
+                        const newFilters = { ...filters, fund_name: value || '' };
+                        setFilters(newFilters);
                       }}
                       freeSolo
                       renderInput={(params) => <TextField {...params} label="基金名称" variant="outlined" size="small" className="text-xs sm:text-sm" />}
@@ -716,6 +720,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <Analytics />
     </>
   )
 }
