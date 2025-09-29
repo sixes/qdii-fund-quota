@@ -250,7 +250,7 @@ export default function Home() {
       <Head>
         <title>QDII基金申购额度查询</title>
         <meta name="description" content="快速查询QDII基金申购额度，支持多条件筛选." />
-        <meta name="keywords" content="QDII基金, 申购额度查询, 纳斯达克指数，标普指数, 纳指额度, 标普额度" />
+        <meta name="keywords" content="QDII基金, 申购额度查询, 纳指, 纳斯达克指数，标普, 纳指额度, 标普额度, 特斯拉, META， 苹果， 谷歌, MEGA， 亚马逊， 英伟达， 腾讯" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
         <link rel="icon" href="/favicon.ico" />
@@ -644,6 +644,12 @@ export default function Home() {
             <h2 className="text-lg sm:text-xl font-semibold text-indigo-700 mb-4">常见问题（QA）</h2>
             {[
               { question: "什么是QDII基金？", answer: "QDII基金是指合格境内机构投资者（Qualified Domestic Institutional Investor）通过境内基金公司募集资金，投资于境外市场的基金产品。" },
+              { question: "QDII基金和普通基金有什么区别？", answer: "QDII基金和普通基金都是投资于股票的基金，但是QDII基金是境外股票投资，而普通基金是境内股票投资。" },
+              { question: "QDII基金有哪些风险？", answer: "QDII基金主要有汇率风险、市场风险、流动性风险和政策风险等。" },
+              { question: "什么是A/C/D/E/F/I类等份额？有什么区别？", answer: "在银行渠道和第三方基金销售平台中，一般只展示A类和C类份额。他们的区别主要是申赎费用的区别，一般建议申购C类份额，前端收费更低。其他份额类别，如D类、E类、F类、I类份额，并没有定义，一般是这两年兴起的发起式基金份额。" },
+              { question: "为什么有些基金没有C类份额？", answer: "有些基金公司可能没有发行C类份额，或者C类份额的申购额度已用完。" }, 
+              { question: "表格里显示某基金公司的纳斯达克100ETF额度高达200万，可是在银行和第三方基金销售平台却无法找到？", 
+                answer: "根据上述表格(2025年9月20日)，可以看到南方基金纳斯达克100指数I类每日申购额度为200万，广发基金F类的为100万。这两类份额均只能从直销渠道(官方APP/微信)购买，银行和第三方基金销售平台不展示也不能购买。" },
               { question: "为啥做这个网站？这个列表的用途是什么？", answer: "一般可以通过银行APP、第三方基金销售平台或基金公司申购基金，但各渠道展示的数据有限。例如，某只基金有A类和C类份额，A类收取申购费，C类不收取。在银行和第三方平台通常只展示A类，C类则不显示。本网站致力于消除信息差，方便投资者快速找到满足自己申购额度的基金。" },
               { question: "有推荐的交易平台吗？", answer: "本网站不提供任何交易平台，只提供数据展示。致力于不偏不倚。" },
               { question: "申购额度是什么？", answer: "申购额度是指基金公司允许投资者购买该基金的最大金额。额度用完后，可能无法继续申购该基金。" },
