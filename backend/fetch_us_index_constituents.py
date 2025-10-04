@@ -1074,13 +1074,20 @@ def main(use_proxy=False, target_index=None):
                     if item.get("symbol"):
                         key_symbols.add(item.get("symbol"))
         
-        logging.info(f"Selected {len(key_symbols)} key symbols for financial ratios")
-        
-        # Use direct individual calls for ratios on key symbols
-        logging.info("Fetching financial ratios for key symbols individually...")
+        # Use all symbols for ratios processing in batches of 50
+        logging.info(f"Fetching financial ratios for all {len(all_symbols_list)} symbols using batch Tickers API...")
         ratios_data = {}
         
-        for i, symbol in enumerate(key_symbols):
+        # Process in batches of 50 symbols  
+        ratio_batch_size = 50
+        
+        for batch_start in range(0, len(all_symbols_list), ratio_batch_size):
+            batch_symbols = all_symbols_list[batch_start:batch_start + ratio_batch_size]
+            batch_num = (batch_start // ratio_batch_size) + 1
+            total_ratio_batches = (len(all_symbols_list) + ratio_batch_size - 1) // ratio_batch_size
+            
+            logging.info(f"Processing ratios batch {batch_num}/{total_ratio_batches}: {len(batch_symbols)} symbols")
+            
             try:
                 if use_proxy:
                     import os
@@ -1088,23 +1095,59 @@ def main(use_proxy=False, target_index=None):
                     os.environ['HTTP_PROXY'] = proxy_url
                     os.environ['HTTPS_PROXY'] = proxy_url
                 
-                logging.info(f"Fetching ratios for {symbol} ({i+1}/{len(key_symbols)})")
+                # Create batch tickers object for this batch
+                symbols_str = ' '.join(batch_symbols)
                 
-                # Create individual ticker and get info
-                ticker = yf.Ticker(symbol)
-                info = ticker.info
+                logging.info(f"Creating Tickers batch object for batch {batch_num} with {len(batch_symbols)} symbols")
                 
-                ratios = {
-                    'pe_ratio': info.get('trailingPE', None),
-                    'eps_ttm': info.get('trailingEps', None),
-                    'ps_ratio': info.get('priceToSalesTrailing12Months', None),
-                    'pb_ratio': info.get('priceToBook', None),
-                    'forward_pe': info.get('forwardPE', None)
-                }
+                # Use batch tickers API
+                tickers = yf.Tickers(symbols_str)
                 
-                if any(v is not None for v in ratios.values()):
-                    ratios_data[symbol] = ratios
-                    logging.info(f"SUCCESS: Got ratios for {symbol}: PE={ratios['pe_ratio']}")
+                # Wait a bit after creating the batch object
+                time.sleep(3)
+                
+                # Extract ratios from each ticker in the batch
+                batch_success_count = 0
+                for symbol in batch_symbols:
+                    try:
+                        logging.debug(f"Extracting ratios for {symbol} from batch {batch_num}...")
+                        
+                        # Access ticker from batch
+                        if hasattr(tickers, 'tickers') and symbol in tickers.tickers:
+                            ticker_obj = tickers.tickers[symbol]
+                            
+                            # Get info data with timeout protection
+                            try:
+                                info = ticker_obj.info
+                                
+                                ratios = {
+                                    'pe_ratio': info.get('trailingPE', None),
+                                    'eps_ttm': info.get('trailingEps', None),
+                                    'ps_ratio': info.get('priceToSalesTrailing12Months', None),
+                                    'pb_ratio': info.get('priceToBook', None),
+                                    'forward_pe': info.get('forwardPE', None)
+                                }
+                                
+                                if any(v is not None for v in ratios.values()):
+                                    ratios_data[symbol] = ratios
+                                    batch_success_count += 1
+                                    if batch_success_count <= 3:  # Log first few successes per batch
+                                        logging.info(f"SUCCESS: Got ratios from batch for {symbol}: PE={ratios['pe_ratio']}")
+                                else:
+                                    logging.debug(f"No ratios found in batch info for {symbol}")
+                                    
+                            except Exception as e:
+                                logging.debug(f"Failed to get info from batch ticker for {symbol}: {e}")
+                        else:
+                            logging.debug(f"Symbol {symbol} not found in batch tickers object")
+                        
+                        # Small delay between symbol processing
+                        time.sleep(0.5)
+                        
+                    except Exception as e:
+                        logging.debug(f"Error processing batch ticker for {symbol}: {e}")
+                
+                logging.info(f"Batch {batch_num} completed: {batch_success_count}/{len(batch_symbols)} ratios fetched")
                 
                 # Clean up proxy env vars
                 if use_proxy:
@@ -1114,11 +1157,15 @@ def main(use_proxy=False, target_index=None):
                     if 'HTTPS_PROXY' in os.environ:
                         del os.environ['HTTPS_PROXY']
                 
-                # Respectful delay between individual requests
-                time.sleep(5)
+                # Delay between batches to respect rate limits
+                if batch_start + ratio_batch_size < len(all_symbols_list):
+                    delay = 10
+                    logging.info(f"Waiting {delay}s before next ratios batch...")
+                    time.sleep(delay)
                 
             except Exception as e:
-                logging.warning(f"Failed to get ratios for {symbol}: {e}")
+                logging.error(f"Ratios batch {batch_num} failed: {e}")
+                
                 # Clean up proxy env vars on error
                 if use_proxy:
                     import os
@@ -1126,8 +1173,6 @@ def main(use_proxy=False, target_index=None):
                         del os.environ['HTTP_PROXY']
                     if 'HTTPS_PROXY' in os.environ:
                         del os.environ['HTTPS_PROXY']
-                # Longer delay on error
-                time.sleep(8)
         
         logging.info(f"Successfully fetched ratios for {len(ratios_data)}/{len(key_symbols)} key symbols")
         
@@ -1135,7 +1180,7 @@ def main(use_proxy=False, target_index=None):
         logging.info(f"Fetching ATH prices using batch API for {len(all_symbols_list)} symbols...")
         
         # Use batches for ATH data
-        batch_size = 10
+        batch_size = 30
         all_ath_data = {}
         
         for i in range(0, len(all_symbols_list), batch_size):
@@ -1155,7 +1200,7 @@ def main(use_proxy=False, target_index=None):
             try:
                 # Use yfinance batch download for historical data only
                 symbols_str = ' '.join(batch_symbols)
-                hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=True, timeout=30)
+                hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=True   , timeout=30)
                 
                 # Process ATH data
                 for symbol in batch_symbols:
