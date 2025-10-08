@@ -1268,7 +1268,7 @@ def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size
         format='[%(asctime)s] [%(levelname)s] %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         handlers=[
-            logging.FileHandler(log_file, mode='w', encoding='utf-8'),  # Overwrite log file
+            logging.FileHandler(log_file, mode='a', encoding='utf-8'),  # Append to log file
             logging.StreamHandler()  # Console output
         ]
     )
