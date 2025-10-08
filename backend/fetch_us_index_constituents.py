@@ -1318,9 +1318,9 @@ def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size
     print_final_summary(results, indices_to_process, total_elapsed, target_index,
                        total_symbols, total_ath_success, total_ath_failed,
                        total_ratios_success, total_ratios_failed, total_dynamodb_saved)
-
-
-
+        
+    send_health_check(success=False)
+    
 if __name__ == "__main__":
     import argparse
     
@@ -1332,7 +1332,9 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Optional: Run batch ratios debug
-    # debug_batch_ratios(use_proxy=args.proxy)
-    
-    main(use_proxy=args.proxy, target_index=args.index, ath_batch_size=args.ath_batch_size, ratio_batch_size=args.ratio_batch_size)
+    try:
+        main(use_proxy=args.proxy, target_index=args.index, ath_batch_size=args.ath_batch_size, ratio_batch_size=args.ratio_batch_size)
+    except Exception as e:
+        logging.error(f"Script execution failed: {e}")
+        send_health_check(success=False)
+        raise
