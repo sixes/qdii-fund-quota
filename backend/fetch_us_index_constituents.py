@@ -1319,7 +1319,7 @@ def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size
                        total_symbols, total_ath_success, total_ath_failed,
                        total_ratios_success, total_ratios_failed, total_dynamodb_saved)
         
-    send_health_check(success=False)
+    send_health_check(success=True)
     
 if __name__ == "__main__":
     import argparse
