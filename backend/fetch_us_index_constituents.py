@@ -183,30 +183,73 @@ def save_to_dynamodb(table, index_name, constituents_data):
         return 0
 
 def build_driver(headless=True, disable_js=False):
-    """Build Chrome driver with optimizations."""
+    """Build Chrome driver with anti-detection and VPS optimizations."""
     opts = Options()
+    
+    # Essential headless options for VPS
     if headless:
         opts.add_argument("--headless=new")
-    opts.add_argument("--disable-gpu")
+    
+    # Anti-detection options
     opts.add_argument("--no-sandbox")
-    opts.add_argument("--window-size=1920,1080")
     opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--disable-software-rasterizer")
+    opts.add_argument("--disable-background-timer-throttling")
+    opts.add_argument("--disable-backgrounding-occluded-windows")
+    opts.add_argument("--disable-renderer-backgrounding")
+    opts.add_argument("--disable-features=TranslateUI,VizDisplayCompositor")
+    opts.add_argument("--disable-ipc-flooding-protection")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_argument("--window-size=1920,1080")
     opts.add_argument("--disable-images")
-    opts.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+    opts.add_argument("--disable-extensions")
+    opts.add_argument("--disable-plugins")
+    opts.add_argument("--disable-default-apps")
+    opts.add_argument("--disable-background-networking")
+    opts.add_argument("--disable-web-security")
+    
+    # Memory and performance optimization
+    opts.add_argument("--memory-pressure-off")
+    opts.add_argument("--max_old_space_size=4096")
+    opts.add_argument("--aggressive-cache-discard")
+    
+    # More realistic user agent for VPS
+    opts.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
     
     if disable_js:
         opts.add_argument("--disable-javascript")
     
-    # Speed optimizations
+    # Enhanced preferences to avoid detection
     prefs = {
         "profile.managed_default_content_settings.images": 2,
-        "profile.default_content_setting_values": {"notifications": 2}
+        "profile.default_content_setting_values": {
+            "notifications": 2,
+            "media_stream": 2,
+            "geolocation": 2,
+        },
+        "profile.default_content_settings.popups": 0
     }
     opts.add_experimental_option("prefs", prefs)
+    opts.add_experimental_option("useAutomationExtension", False)
+    opts.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     
-    driver = webdriver.Chrome(options=opts)
-    driver.set_page_load_timeout(10)
-    return driver
+    # Create driver with enhanced error handling
+    try:
+        driver = webdriver.Chrome(options=opts)
+        
+        # Remove webdriver property to avoid detection
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        # Set realistic timeouts based on test results
+        driver.set_page_load_timeout(90)  # From test: sites need 90s timeout
+        driver.implicitly_wait(15)
+        
+        return driver
+        
+    except Exception as e:
+        print(f"Failed to create Chrome driver: {e}")
+        raise
 
 def fetch_slickcharts_data(url, index_name, max_retries=3):
     """Fetch data from SlickCharts using table parsing with retry logic."""
@@ -219,10 +262,11 @@ def fetch_slickcharts_data(url, index_name, max_retries=3):
             start_time = datetime.now()
             driver.get(url)
             
-            # Wait for page completion
-            WebDriverWait(driver, 20).until(
+            # Wait for page completion with VPS-tested timeout  
+            WebDriverWait(driver, 15).until(
                 lambda d: d.execute_script("return document.readyState") == "complete"
             )
+            time.sleep(3)  # Additional wait for content to stabilize on VPS
             
             # Try DOM table extraction first
             constituents = parse_slickcharts_table(driver, index_name)
@@ -422,9 +466,11 @@ def fetch_stockanalysis_data(url, index_name, max_retries=3):
             start_time = datetime.now()
             driver.get(url)
             
-            WebDriverWait(driver, 20).until(
+            # Wait for page completion with VPS-tested timeout
+            WebDriverWait(driver, 15).until(
                 lambda d: d.execute_script("return document.readyState") == "complete"
             )
+            time.sleep(3)  # Additional wait for content to stabilize
             
             constituents = parse_stockanalysis_table(driver, index_name)
             
