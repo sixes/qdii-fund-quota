@@ -40,7 +40,7 @@ def test_chrome_setup():
         print("     sudo apt-get update && sudo apt-get install -y google-chrome-stable")
         return False
     
-    # Test Chrome options
+    # Test Chrome options with enhanced anti-detection
     print("\n2. Testing Chrome options...")
     opts = Options()
     opts.add_argument("--headless=new")
@@ -48,17 +48,50 @@ def test_chrome_setup():
     opts.add_argument("--disable-dev-shm-usage")
     opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-software-rasterizer")
+    opts.add_argument("--disable-background-timer-throttling")
+    opts.add_argument("--disable-backgrounding-occluded-windows")
+    opts.add_argument("--disable-renderer-backgrounding")
+    opts.add_argument("--disable-features=TranslateUI,VizDisplayCompositor")
+    opts.add_argument("--disable-ipc-flooding-protection")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
     opts.add_argument("--window-size=1920,1080")
-    opts.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
+    opts.add_argument("--disable-images")
+    opts.add_argument("--disable-extensions")
+    opts.add_argument("--disable-plugins")
+    opts.add_argument("--disable-default-apps")
+    opts.add_argument("--disable-background-networking")
+    opts.add_argument("--disable-web-security")
+    opts.add_argument("--memory-pressure-off")
+    opts.add_argument("--max_old_space_size=4096")
+    opts.add_argument("--aggressive-cache-discard")
+    opts.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
+    
+    # Enhanced preferences
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.default_content_setting_values": {
+            "notifications": 2,
+            "media_stream": 2,
+            "geolocation": 2,
+        },
+        "profile.default_content_settings.popups": 0
+    }
+    opts.add_experimental_option("prefs", prefs)
+    opts.add_experimental_option("useAutomationExtension", False)
+    opts.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     
     try:
         print("   Creating WebDriver instance...")
         driver = webdriver.Chrome(options=opts)
         print("   ✓ WebDriver created successfully")
         
+        # Remove webdriver property to avoid detection
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
         # Test basic navigation
         print("\n3. Testing basic navigation...")
-        driver.set_page_load_timeout(30)
+        driver.set_page_load_timeout(60)  # Longer timeout
+        driver.implicitly_wait(15)
         
         test_url = "https://httpbin.org/get"
         print(f"   Loading test URL: {test_url}")
@@ -90,35 +123,92 @@ def test_chrome_setup():
             print(f"   ✗ JavaScript execution failed: {e}")
             return False
         
-        print("\n6. Testing target websites...")
+        print("\n6. Testing target websites with progressive timeouts...")
         
-        # Test SlickCharts (most critical)
+        # Test with different strategies
         test_sites = [
             ("SlickCharts", "https://www.slickcharts.com/sp500"),
             ("StockAnalysis", "https://stockanalysis.com/list/sp-500-stocks/")
         ]
         
         for site_name, url in test_sites:
-            try:
-                print(f"   Testing {site_name}: {url}")
-                start_time = time.time()
-                driver.get(url)
-                load_time = time.time() - start_time
+            print(f"\n   === Testing {site_name} ===")
+            print(f"   URL: {url}")
+            
+            # Try multiple strategies
+            strategies = [
+                ("Quick load (30s)", 30),
+                ("Patient load (60s)", 60),
+                ("Very patient load (90s)", 90)
+            ]
+            
+            success = False
+            for strategy_name, timeout in strategies:
+                if success:
+                    break
+                    
+                try:
+                    print(f"   Trying {strategy_name}...")
+                    driver.set_page_load_timeout(timeout)
+                    
+                    start_time = time.time()
+                    driver.get(url)
+                    load_time = time.time() - start_time
+                    
+                    print(f"   Page loaded in {load_time:.2f}s")
+                    
+                    # Wait for document ready
+                    WebDriverWait(driver, 15).until(
+                        lambda d: d.execute_script("return document.readyState") == "complete"
+                    )
+                    
+                    # Check page content
+                    page_source_length = len(driver.page_source)
+                    print(f"   Page source length: {page_source_length} characters")
+                    
+                    # Check for tables
+                    tables = driver.find_elements(By.TAG_NAME, "table")
+                    print(f"   Found {len(tables)} tables")
+                    
+                    # Check for specific content
+                    if "sp500" in url.lower():
+                        # Look for S&P 500 specific content
+                        if "S&P 500" in driver.page_source or "SP500" in driver.page_source:
+                            print(f"   ✓ Found S&P 500 content")
+                        else:
+                            print(f"   ⚠ No S&P 500 specific content found")
+                    
+                    if len(tables) > 0 or page_source_length > 10000:
+                        print(f"   ✓ {site_name} loaded successfully with {strategy_name}")
+                        success = True
+                    else:
+                        print(f"   ⚠ {site_name} loaded but content seems minimal")
+                        
+                except Exception as e:
+                    print(f"   ✗ {strategy_name} failed: {str(e)[:100]}...")
+                    
+                    # Check if it's a timeout specifically
+                    if "timeout" in str(e).lower():
+                        print(f"   → Timeout detected, trying next strategy")
+                    else:
+                        print(f"   → Non-timeout error: {type(e).__name__}")
+            
+            if not success:
+                print(f"   ❌ All strategies failed for {site_name}")
                 
-                # Wait for basic page load
-                WebDriverWait(driver, 30).until(
-                    lambda d: d.execute_script("return document.readyState") == "complete"
-                )
-                
-                # Check for table presence
-                tables = driver.find_elements(By.TAG_NAME, "table")
-                print(f"   ✓ {site_name} loaded in {load_time:.2f}s, found {len(tables)} tables")
-                
-                if len(tables) == 0:
-                    print(f"   ⚠ Warning: No tables found on {site_name}")
-                
-            except Exception as e:
-                print(f"   ✗ {site_name} test failed: {e}")
+                # Try to diagnose the issue
+                print(f"   Diagnosis attempts:")
+                try:
+                    # Try a simple GET to check if site is reachable
+                    import urllib.request
+                    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                    response = urllib.request.urlopen(req, timeout=10)
+                    print(f"   → Site responds to simple HTTP request: {response.code}")
+                except Exception as http_e:
+                    print(f"   → Site doesn't respond to simple HTTP: {http_e}")
+                    
+            else:
+                print(f"   ✅ {site_name} working")
         
         driver.quit()
         print("\n" + "=" * 60)
