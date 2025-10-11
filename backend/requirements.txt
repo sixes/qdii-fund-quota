@@ -1,0 +1,18 @@
+# US Index Constituents Fetcher - Python Dependencies
+
+# Financial data fetching
+yfinance==0.2.66
+
+# AWS SDK for DynamoDB
+boto3==1.40.45
+
+# Environment variables management
+python-dotenv==1.1.1
+
+# HTTP Requests and HTML Parsing
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# SOCKS proxy support (for yfinance if needed)
+PySocks==1.7.1
