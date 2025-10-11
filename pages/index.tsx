@@ -23,8 +23,12 @@ import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
+import Link from 'next/link';
+import Navigation from '../components/Navigation';
+import { useRouter } from 'next/router';
 
 export default function Home() {
+  const router = useRouter();
   const [filters, setFilters] = useState({ fund_company: '', fund_name: '纳斯达克100ETF', fund_code: '', country: '' });
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +42,19 @@ export default function Home() {
   const [state, handleSubmit] = useForm("xyzdlpln");
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'index' | 'funds' | 'stocks'>('index');
+  
+  // Set default language to EN on mount
+  useEffect(() => {
+    // Check if language parameter is in URL
+    const langFromUrl = router.query.lang as string;
+    if (langFromUrl === 'zh') {
+      setLanguage('zh');
+    } else {
+      setLanguage('en');
+    }
+    setActiveTab('index');
+    setActiveIndex('nasdaq100');
+  }, [router.query.lang]);
   const [stockData, setStockData] = useState<any[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockMarket, setStockMarket] = useState<'US' | 'HK'>('US');
@@ -50,6 +67,7 @@ export default function Home() {
   const [indexSortKey, setIndexSortKey] = useState<string>('no');
   const [indexSortDirection, setIndexSortDirection] = useState<'asc' | 'desc'>('asc');
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
+  const [openMenu, setOpenMenu] = useState<null | 'nasdaq100' | 'sp500' | 'dow'>(null);
 
   const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'));
 
@@ -361,30 +379,7 @@ export default function Home() {
 
       {language === 'en' ? (
         <div className="min-h-screen bg-gray-100">
-          <nav className="bg-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <h1 className="text-2xl font-bold text-gray-900">US Index Constituents</h1>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div className="hidden md:flex items-baseline space-x-4">
-                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'nasdaq100' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('nasdaq100'); fetchIndexData('nasdaq100'); }}>Nasdaq 100</button>
-                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'sp500' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('sp500'); fetchIndexData('sp500'); }}>S&P 500</button>
-                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'dow' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('dow'); fetchIndexData('dow'); }}>Dow Jones 30</button>
-                  </div>
-                  <div className="ml-4 flex items-center">
-                    <div className="flex bg-gray-200 rounded-lg p-1">
-                      <button className={`px-3 py-1 rounded-md text-sm font-medium transition bg-indigo-600 text-white`} onClick={() => setLanguage('en')}>EN</button>
-                      <button className={`px-3 py-1 rounded-md text-sm font-medium transition text-gray-600`} onClick={() => setLanguage('zh')}>中文</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </nav>
+          <Navigation language={language} onLanguageChange={setLanguage} />
           <main className="py-10">
             <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
               <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white overflow-x-auto">
@@ -484,38 +479,23 @@ export default function Home() {
           </main>
         </div>
       ) : (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-          <nav className="bg-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <h1 className="text-2xl font-bold text-gray-900">{t.zh.title}</h1>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <div className="flex items-baseline space-x-2 mr-4">
-                    <button className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'index' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => setActiveTab('index')}>{t.zh.indexConstituents}</button>
-                    <button className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => setActiveTab('funds')}>{t.zh.qdii}</button>
-                    <button className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => setActiveTab('stocks')}>{t.zh.mega7}</button>
-                  </div>
-                  <div className="hidden md:flex items-baseline space-x-2 mr-4">
-                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'nasdaq100' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('nasdaq100'); fetchIndexData('nasdaq100'); }}>Nasdaq 100</button>
-                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'sp500' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('sp500'); fetchIndexData('sp500'); }}>S&P 500</button>
-                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'dow' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('dow'); fetchIndexData('dow'); }}>Dow Jones 30</button>
-                  </div>
-                  <div className="flex bg-gray-200 rounded-lg p-1">
-                    <button className="px-3 py-1 rounded-md text-sm font-medium transition text-gray-600" onClick={() => setLanguage('en')}>EN</button>
-                    <button className="px-3 py-1 rounded-md text-sm font-medium transition bg-indigo-600 text-white" onClick={() => setLanguage('zh')}>中文</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </nav>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-0">
+          <Navigation 
+            language={language} 
+            onLanguageChange={setLanguage} 
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
           <div className="max-w-5xl mx-auto px-2 py-8">
             <div className="mb-8 text-center">
               <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-700 mb-2 tracking-tight">{t.zh.title}</h1>
               <p className="text-gray-600 text-lg">{t.zh.description}</p>
+            </div>
+            {/* Removed in-page language toggle and tab buttons; handled in navbar */}
+            <div className="flex justify-center mb-6 bg-white rounded-xl shadow-md p-1">
+              <button className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${activeIndex === 'nasdaq100' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => { setActiveIndex('nasdaq100'); fetchIndexData('nasdaq100'); }}>Nasdaq 100</button>
+              <button className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${activeIndex === 'sp500' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => { setActiveIndex('sp500'); fetchIndexData('sp500'); }}>S&P 500</button>
+              <button className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${activeIndex === 'dow' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`} onClick={() => { setActiveIndex('dow'); fetchIndexData('dow'); }}>Dow Jones 30</button>
             </div>
 
             {activeTab === 'index' && (

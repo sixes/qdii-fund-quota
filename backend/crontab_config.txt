@@ -1,0 +1,36 @@
+# US Index Constituents Fetcher Crontab Configuration
+# Runs 10 minutes after US stock market closes (4:10 PM ET)
+# 
+# US Market closes at 4:00 PM ET (Eastern Time)
+# 4:10 PM ET = 5:10 AM UTC+8 (next day during EST)
+# 4:10 PM ET = 4:10 AM UTC+8 (next day during EDT)
+#
+# Since US uses Daylight Saving Time (March-November), we need two entries:
+
+# During EDT (March 2nd Sunday - November 1st Sunday): 4:10 AM UTC+8
+10 4 * 3-10 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log
+
+# During EDT (November): 4:10 AM UTC+8 (first week only)  
+10 4 1-7 11 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log
+
+# During EST (November 2nd Sunday - March 2nd Sunday): 5:10 AM UTC+8
+10 5 8-30 11 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log
+10 5 * 12-2 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log
+10 5 1-10 3 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log
+
+# Explanation:
+# - Runs Tuesday-Saturday (2-6) because UTC+8 is ahead of US timezone
+#   When US market closes Mon-Fri, it's already Tue-Sat in UTC+8
+# - Uses full python path to avoid PATH issues
+# - Logs output to cron_execution.log
+# - Uses --proxy flag as shown in your command
+# - Automatically handles daylight saving time changes
+
+# To install this crontab:
+# 1. crontab -e
+# 2. Copy the relevant lines above
+# 3. Save and exit
+
+# Alternative: Simple version that runs at both times daily (safer)
+# 10 4 * * 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log
+# 10 5 * * 2-6 cd /home/ef/qdii-fund-quota/backend && /home/ef/.pyenv/shims/python fetch_us_index_constituents.py --proxy 2>&1 | tee -a cron_execution.log

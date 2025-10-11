@@ -1,0 +1,20 @@
+<a href="/stocks/nvda/">NVDA</a>
+
+/html/body/div/div[1]/div[2]/main/div[2]/div/div/div[5]/table/tbody/tr[1]/td[2]/a
+
+
+
+/html/body/div/div[1]/div[2]/main/div[2]/div/div/div[5]/table/tbody
+<tr class="svelte-1ro3niy"><!----><!----><!----><!----><td class="svelte-1ro3niy">1</td><!----><a href="/stocks/nvda/">NVDA</a><td class="sym svelte-1ro3niy"><!----></td><!----><!----><!----><!----><td class="slw svelte-1ro3niy">NVIDIA Corporation</td><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">4,533.89B</td><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">186.58</td><!----><!----><!----><!----><!----><td class="tr svelte-1ro3niy">165.22B</td><!----><td class="rg svelte-1ro3niy">2.60%</td><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">236,981,032</td><!----><!----><!----><!----><!----><!----><td class="sl svelte-1ro3niy">Semiconductors</td><!----><!----><!----><!----><!----><!----><td class="sl svelte-1ro3niy">Technology</td><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">71.55%</td><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">86.60B</td><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">72.02B</td><!----><!----><!----><!----><!----><!----><!----><td class="svelte-1ro3niy">46.19B</td></tr>
+
+
+
+
+1 by default, we use EN version
+2 by default, we show nasdaq 100 index constituents
+3 in EN version, there are Nasdaq 100, S&P 500 , Dow Jone 30 in the nav bar,when clicking each of them,
+it show a dropdonw menu: index constituents, historical returns(empty page for now)
+4 so when clicking index constituents, the url should be /nasdaq100, /sp500, /dowjone30, the content should show
+their constituents
+5 in CN version, there are two more in the nav bar: QDII Fund Quotas, Mega 7+, when clicking each, it should show
+the respective content, that is, the current table remains unchanged

@@ -1,0 +1,242 @@
+[
+  {
+    "no": 1,
+    "symbol": "NVDA",
+    "name": "NVIDIA Corporation",
+    "marketCap": "4,679.45B",
+    "price": 192.57,
+    "change": 1.83
+  },
+  {
+    "no": 2,
+    "symbol": "MSFT",
+    "name": "Microsoft Corporation",
+    "marketCap": "3,883.09B",
+    "price": 522.4,
+    "change": -0.47
+  },
+  {
+    "no": 3,
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "marketCap": "3,770.05B",
+    "price": 254.04,
+    "change": -1.56
+  },
+  {
+    "no": 4,
+    "symbol": "AMZN",
+    "name": "Amazon.com, Inc.",
+    "marketCap": "2,428.83B",
+    "price": 227.74,
+    "change": 1.12
+  },
+  {
+    "no": 5,
+    "symbol": "JPM",
+    "name": "JPMorgan Chase & Co.",
+    "marketCap": "840.13B",
+    "price": 305.53,
+    "change": 0.49
+  },
+  {
+    "no": 6,
+    "symbol": "WMT",
+    "name": "Walmart Inc.",
+    "marketCap": "811.40B",
+    "price": 101.77,
+    "change": -1.1
+  },
+  {
+    "no": 7,
+    "symbol": "V",
+    "name": "Visa Inc.",
+    "marketCap": "668.61B",
+    "price": 347.04,
+    "change": -1.23
+  },
+  {
+    "no": 8,
+    "symbol": "JNJ",
+    "name": "Johnson & Johnson",
+    "marketCap": "460.19B",
+    "price": 191.08,
+    "change": 0.73
+  },
+  {
+    "no": 9,
+    "symbol": "HD",
+    "name": "The Home Depot, Inc.",
+    "marketCap": "375.95B",
+    "price": 377.69,
+    "change": -1.59
+  },
+  {
+    "no": 10,
+    "symbol": "PG",
+    "name": "The Procter & Gamble Company",
+    "marketCap": "352.43B",
+    "price": 150.58,
+    "change": -0.07
+  },
+  {
+    "no": 11,
+    "symbol": "UNH",
+    "name": "UnitedHealth Group Incorporated",
+    "marketCap": "333.01B",
+    "price": 367.69,
+    "change": -0.6
+  },
+  {
+    "no": 12,
+    "symbol": "CVX",
+    "name": "Chevron Corporation",
+    "marketCap": "307.71B",
+    "price": 151.64,
+    "change": -1.37
+  },
+  {
+    "no": 13,
+    "symbol": "KO",
+    "name": "The Coca-Cola Company",
+    "marketCap": "285.63B",
+    "price": 66.37,
+    "change": 0.38
+  },
+  {
+    "no": 14,
+    "symbol": "CSCO",
+    "name": "Cisco Systems, Inc.",
+    "marketCap": "276.57B",
+    "price": 69.96,
+    "change": -0.53
+  },
+  {
+    "no": 15,
+    "symbol": "IBM",
+    "name": "International Business Machines Corporation",
+    "marketCap": "268.49B",
+    "price": 288.23,
+    "change": -0.42
+  },
+  {
+    "no": 16,
+    "symbol": "GS",
+    "name": "The Goldman Sachs Group, Inc.",
+    "marketCap": "246.87B",
+    "price": 779.96,
+    "change": 0.44
+  },
+  {
+    "no": 17,
+    "symbol": "CAT",
+    "name": "Caterpillar Inc.",
+    "marketCap": "234.41B",
+    "price": 500.36,
+    "change": -0.35
+  },
+  {
+    "no": 18,
+    "symbol": "CRM",
+    "name": "Salesforce, Inc.",
+    "marketCap": "233.55B",
+    "price": 245.33,
+    "change": 2.04
+  },
+  {
+    "no": 19,
+    "symbol": "AXP",
+    "name": "American Express Company",
+    "marketCap": "225.77B",
+    "price": 324.44,
+    "change": 0.19
+  },
+  {
+    "no": 20,
+    "symbol": "MRK",
+    "name": "Merck & Co., Inc.",
+    "marketCap": "218.56B",
+    "price": 87.5,
+    "change": 1.27
+  },
+  {
+    "no": 21,
+    "symbol": "MCD",
+    "name": "McDonald's Corporation",
+    "marketCap": "209.66B",
+    "price": 293.81,
+    "change": -0.2
+  },
+  {
+    "no": 22,
+    "symbol": "DIS",
+    "name": "The Walt Disney Company",
+    "marketCap": "199.55B",
+    "price": 110.99,
+    "change": -0.8
+  },
+  {
+    "no": 23,
+    "symbol": "VZ",
+    "name": "Verizon Communications Inc.",
+    "marketCap": "172.15B",
+    "price": 40.83,
+    "change": -1.19
+  },
+  {
+    "no": 24,
+    "symbol": "BA",
+    "name": "The Boeing Company",
+    "marketCap": "163.33B",
+    "price": 216.0,
+    "change": -4.14
+  },
+  {
+    "no": 25,
+    "symbol": "AMGN",
+    "name": "Amgen Inc.",
+    "marketCap": "159.05B",
+    "price": 295.43,
+    "change": 0.27
+  },
+  {
+    "no": 26,
+    "symbol": "HON",
+    "name": "Honeywell International Inc.",
+    "marketCap": "129.66B",
+    "price": 204.23,
+    "change": -2.68
+  },
+  {
+    "no": 27,
+    "symbol": "NKE",
+    "name": "NIKE, Inc.",
+    "marketCap": "100.61B",
+    "price": 68.06,
+    "change": -1.49
+  },
+  {
+    "no": 28,
+    "symbol": "SHW",
+    "name": "The Sherwin-Williams Company",
+    "marketCap": "82.85B",
+    "price": 333.22,
+    "change": -1.29
+  },
+  {
+    "no": 29,
+    "symbol": "MMM",
+    "name": "3M Company",
+    "marketCap": "81.43B",
+    "price": 152.88,
+    "change": -2.0
+  },
+  {
+    "no": 30,
+    "symbol": "TRV",
+    "name": "The Travelers Companies, Inc.",
+    "marketCap": "61.78B",
+    "price": 274.41,
+    "change": -2.95
+  }
+]
