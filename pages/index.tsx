@@ -261,15 +261,19 @@ export default function Home() {
 
   const [fundsPage, setFundsPage] = useState(1);
   const [stocksPage, setStocksPage] = useState(1);
+  const [indexPage, setIndexPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
 
   useEffect(() => { setFundsPage(1); }, [filters, activeTab]);
   useEffect(() => { setStocksPage(1); }, [selectedDate, stockMarket, activeTab]);
+  useEffect(() => { setIndexPage(1); }, [activeIndex, activeTab, indexData.length]);
 
   const pagedFunds = data;
   const pagedStocks = filteredStockData.slice((stocksPage-1)*ITEMS_PER_PAGE, stocksPage*ITEMS_PER_PAGE);
+  const pagedIndexData = indexData.slice((indexPage-1)*ITEMS_PER_PAGE, indexPage*ITEMS_PER_PAGE);
   const fundsTotalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
   const stocksTotalPages = Math.ceil(filteredStockData.length / ITEMS_PER_PAGE);
+  const indexTotalPages = Math.ceil(indexData.length / ITEMS_PER_PAGE);
 
   function getPageNumbers(current: number, total: number) {
     if (total <= 4) return Array.from({length: total}, (_,i) => i+1);
@@ -397,7 +401,10 @@ export default function Home() {
                         <TableSortLabel active={sortKey === 'name'} direction={sortKey === 'name' ? sortDirection : 'asc'} onClick={() => handleSort('name')}>{t.en.companyName}</TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                        <TableSortLabel active={sortKey === 'weight'} direction={sortKey === 'weight' ? sortDirection : 'desc'} onClick={() => handleSort('weight')}>{t.en.weight}</TableSortLabel>
+                        <TableSortLabel active={sortKey === 'ath_price'} direction={sortKey === 'ath_price' ? sortDirection : 'desc'} onClick={() => handleSort('ath_price')}>{t.en.athPrice}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'ath_date'} direction={sortKey === 'ath_date' ? sortDirection : 'desc'} onClick={() => handleSort('ath_date')}>{t.en.athDate}</TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel active={sortKey === 'price'} direction={sortKey === 'price' ? sortDirection : 'desc'} onClick={() => handleSort('price')}>{t.en.price}</TableSortLabel>
@@ -405,17 +412,17 @@ export default function Home() {
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel active={sortKey === 'change'} direction={sortKey === 'change' ? sortDirection : 'desc'} onClick={() => handleSort('change')}>{t.en.change}</TableSortLabel>
                       </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'weight'} direction={sortKey === 'weight' ? sortDirection : 'desc'} onClick={() => handleSort('weight')}>{t.en.weight}</TableSortLabel>
+                      </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel active={sortKey === 'marketCap'} direction={sortKey === 'marketCap' ? sortDirection : 'desc'} onClick={() => handleSort('marketCap')}>{t.en.marketCap}</TableSortLabel>
-                      </TableCell>
-                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                        <TableSortLabel active={sortKey === 'ath_price'} direction={sortKey === 'ath_price' ? sortDirection : 'desc'} onClick={() => handleSort('ath_price')}>{t.en.athPrice}</TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel active={sortKey === 'pe_ratio'} direction={sortKey === 'pe_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('pe_ratio')}>{t.en.peRatio}</TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                        <TableSortLabel active={sortKey === 'eps_ttm'} direction={sortKey === 'eps_ttm' ? sortDirection : 'desc'} onClick={() => handleSort('eps_ttm')}>{t.en.epsTtm}</TableSortLabel>
+                        <TableSortLabel active={sortKey === 'forward_pe'} direction={sortKey === 'forward_pe' ? sortDirection : 'desc'} onClick={() => handleSort('forward_pe')}>{t.en.forwardPe}</TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
                         <TableSortLabel active={sortKey === 'ps_ratio'} direction={sortKey === 'ps_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('ps_ratio')}>{t.en.psRatio}</TableSortLabel>
@@ -424,10 +431,7 @@ export default function Home() {
                         <TableSortLabel active={sortKey === 'pb_ratio'} direction={sortKey === 'pb_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('pb_ratio')}>{t.en.pbRatio}</TableSortLabel>
                       </TableCell>
                       <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                        <TableSortLabel active={sortKey === 'forward_pe'} direction={sortKey === 'forward_pe' ? sortDirection : 'desc'} onClick={() => handleSort('forward_pe')}>{t.en.forwardPe}</TableSortLabel>
-                      </TableCell>
-                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                        <TableSortLabel active={sortKey === 'ath_date'} direction={sortKey === 'ath_date' ? sortDirection : 'desc'} onClick={() => handleSort('ath_date')}>{t.en.athDate}</TableSortLabel>
+                        <TableSortLabel active={sortKey === 'eps_ttm'} direction={sortKey === 'eps_ttm' ? sortDirection : 'desc'} onClick={() => handleSort('eps_ttm')}>{t.en.epsTtm}</TableSortLabel>
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -441,33 +445,46 @@ export default function Home() {
                         <TableCell colSpan={13} align="center" className="py-8 text-gray-500">{t.en.noData}</TableCell>
                       </TableRow>
                     ) : (
-                      indexData.map((row, i) => (
+                      pagedIndexData.map((row, i) => (
                         <TableRow key={i} className="hover:bg-gray-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.no}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.symbol}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.name}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.weight ? `${row.weight.toFixed(2)}%` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_price ? `$${row.ath_price.toFixed(2)}` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_date || '-'}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.price ? `$${row.price.toFixed(2)}` : '-'}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 }, color: row.change > 0 ? 'green' : row.change < 0 ? 'red' : 'inherit' }}>{row.change ? `${row.change > 0 ? '+' : ''}${row.change.toFixed(2)}%` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.weight ? `${row.weight.toFixed(2)}%` : '-'}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.marketCap || '-'}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_price ? `$${row.ath_price.toFixed(2)}` : '-'}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pe_ratio ? row.pe_ratio.toFixed(2) : '-'}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.eps_ttm ? row.eps_ttm.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.forward_pe ? row.forward_pe.toFixed(2) : '-'}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ps_ratio ? row.ps_ratio.toFixed(2) : '-'}</TableCell>
                           <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pb_ratio ? row.pb_ratio.toFixed(2) : '-'}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.forward_pe ? row.forward_pe.toFixed(2) : '-'}</TableCell>
-                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_date || '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.eps_ttm ? row.eps_ttm.toFixed(2) : '-'}</TableCell>
                         </TableRow>
                       ))
                     )}
                   </TableBody>
                 </Table>
+                {indexData.length > 0 && (
+                  <div className="relative flex flex-row flex-nowrap items-center w-full py-4 px-2 gap-2">
+                    <div className="flex-1 order-2 sm:order-1" />
+                    <div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-2 flex-none mx-auto order-1 sm:order-2">
+                      {indexData.length > ITEMS_PER_PAGE && (
+                        <Pagination count={indexTotalPages} page={indexPage} onChange={(_, value) => setIndexPage(value)} color="primary" shape="rounded" siblingCount={0} boundaryCount={1} size="small" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex justify-end order-3">
+                      <span className="text-gray-500 text-xs sm:text-sm md:text-base whitespace-nowrap">Showing {(indexPage-1)*ITEMS_PER_PAGE+1} to {Math.min(indexPage*ITEMS_PER_PAGE, indexData.length)} of {indexData.length.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
               </TableContainer>
             </div>
           </main>
         </div>
       ) : (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-0">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
           <nav className="bg-white shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
@@ -478,44 +495,14 @@ export default function Home() {
                 </div>
                 <div className="flex items-center">
                   <div className="flex items-baseline space-x-2 mr-4">
-                    <button
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'index' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                      onClick={() => setActiveTab('index')}
-                    >
-                      {t.zh.indexConstituents}
-                    </button>
-                    <button
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                      onClick={() => setActiveTab('funds')}
-                    >
-                      {t.zh.qdii}
-                    </button>
-                    <button
-                      className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                      onClick={() => setActiveTab('stocks')}
-                    >
-                      {t.zh.mega7}
-                    </button>
+                    <button className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'index' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => setActiveTab('index')}>{t.zh.indexConstituents}</button>
+                    <button className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => setActiveTab('funds')}>{t.zh.qdii}</button>
+                    <button className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => setActiveTab('stocks')}>{t.zh.mega7}</button>
                   </div>
                   <div className="hidden md:flex items-baseline space-x-2 mr-4">
-                    <button
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'nasdaq100' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                      onClick={() => { setActiveIndex('nasdaq100'); fetchIndexData('nasdaq100'); }}
-                    >
-                      Nasdaq 100
-                    </button>
-                    <button
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'sp500' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                      onClick={() => { setActiveIndex('sp500'); fetchIndexData('sp500'); }}
-                    >
-                      S&P 500
-                    </button>
-                    <button
-                      className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'dow' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                      onClick={() => { setActiveIndex('dow'); fetchIndexData('dow'); }}
-                    >
-                      Dow Jones 30
-                    </button>
+                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'nasdaq100' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('nasdaq100'); fetchIndexData('nasdaq100'); }}>Nasdaq 100</button>
+                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'sp500' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('sp500'); fetchIndexData('sp500'); }}>S&P 500</button>
+                    <button className={`px-3 py-2 rounded-md text-sm font-medium ${activeIndex === 'dow' ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-200'}`} onClick={() => { setActiveIndex('dow'); fetchIndexData('dow'); }}>Dow Jones 30</button>
                   </div>
                   <div className="flex bg-gray-200 rounded-lg p-1">
                     <button className="px-3 py-1 rounded-md text-sm font-medium transition text-gray-600" onClick={() => setLanguage('en')}>EN</button>
@@ -526,97 +513,107 @@ export default function Home() {
             </div>
           </nav>
           <div className="max-w-5xl mx-auto px-2 py-8">
-            {/* Title and description */}
             <div className="mb-8 text-center">
               <h1 className="text-3xl md:text-4xl font-extrabold text-indigo-700 mb-2 tracking-tight">{t.zh.title}</h1>
               <p className="text-gray-600 text-lg">{t.zh.description}</p>
             </div>
-            {/* Removed in-page language toggle and tab buttons; handled in navbar */}
+
             {activeTab === 'index' && (
-              <>
-                {/* Removed in-page Index Navigation; handled in navbar */}
-                <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
-                  <Table size="small" sx={{ minWidth: { xs: 320, sm: 650 } }}>
-                    <TableHead>
-                      <TableRow className="bg-green-100 text-green-800" sx={{ height: { xs: 28, sm: 32 } }}>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 30, sm: 40 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'no'} direction={sortKey === 'no' ? sortDirection : 'asc'} onClick={() => handleSort('no')}>{t.zh.no}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'symbol'} direction={sortKey === 'symbol' ? sortDirection : 'asc'} onClick={() => handleSort('symbol')}>{t.zh.symbol}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 80, sm: 120 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'name'} direction={sortKey === 'name' ? sortDirection : 'asc'} onClick={() => handleSort('name')}>{t.zh.companyName}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'weight'} direction={sortKey === 'weight' ? sortDirection : 'desc'} onClick={() => handleSort('weight')}>{t.zh.weight}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'price'} direction={sortKey === 'price' ? sortDirection : 'desc'} onClick={() => handleSort('price')}>{t.zh.price}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'change'} direction={sortKey === 'change' ? sortDirection : 'desc'} onClick={() => handleSort('change')}>{t.zh.change}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'marketCap'} direction={sortKey === 'marketCap' ? sortDirection : 'desc'} onClick={() => handleSort('marketCap')}>{t.zh.marketCap}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'ath_price'} direction={sortKey === 'ath_price' ? sortDirection : 'desc'} onClick={() => handleSort('ath_price')}>{t.zh.athPrice}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'pe_ratio'} direction={sortKey === 'pe_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('pe_ratio')}>{t.zh.peRatio}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'eps_ttm'} direction={sortKey === 'eps_ttm' ? sortDirection : 'desc'} onClick={() => handleSort('eps_ttm')}>{t.zh.epsTtm}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'ps_ratio'} direction={sortKey === 'ps_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('ps_ratio')}>{t.zh.psRatio}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'pb_ratio'} direction={sortKey === 'pb_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('pb_ratio')}>{t.zh.pbRatio}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'forward_pe'} direction={sortKey === 'forward_pe' ? sortDirection : 'desc'} onClick={() => handleSort('forward_pe')}>{t.zh.forwardPe}</TableSortLabel>
-                        </TableCell>
-                        <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
-                          <TableSortLabel active={sortKey === 'ath_date'} direction={sortKey === 'ath_date' ? sortDirection : 'desc'} onClick={() => handleSort('ath_date')}>{t.zh.athDate}</TableSortLabel>
-                        </TableCell>
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
+                <Table size="small" sx={{ minWidth: { xs: 320, sm: 650 } }}>
+                  <TableHead>
+                    <TableRow className="bg-green-100 text-green-800" sx={{ height: { xs: 28, sm: 32 } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 30, sm: 40 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'no'} direction={sortKey === 'no' ? sortDirection : 'asc'} onClick={() => handleSort('no')}>{t.zh.no}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'symbol'} direction={sortKey === 'symbol' ? sortDirection : 'asc'} onClick={() => handleSort('symbol')}>{t.zh.symbol}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 80, sm: 120 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'name'} direction={sortKey === 'name' ? sortDirection : 'asc'} onClick={() => handleSort('name')}>{t.zh.companyName}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'ath_price'} direction={sortKey === 'ath_price' ? sortDirection : 'desc'} onClick={() => handleSort('ath_price')}>{t.zh.athPrice}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'ath_date'} direction={sortKey === 'ath_date' ? sortDirection : 'desc'} onClick={() => handleSort('ath_date')}>{t.zh.athDate}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'price'} direction={sortKey === 'price' ? sortDirection : 'desc'} onClick={() => handleSort('price')}>{t.zh.price}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'change'} direction={sortKey === 'change' ? sortDirection : 'desc'} onClick={() => handleSort('change')}>{t.zh.change}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'weight'} direction={sortKey === 'weight' ? sortDirection : 'desc'} onClick={() => handleSort('weight')}>{t.zh.weight}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'marketCap'} direction={sortKey === 'marketCap' ? sortDirection : 'desc'} onClick={() => handleSort('marketCap')}>{t.zh.marketCap}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'pe_ratio'} direction={sortKey === 'pe_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('pe_ratio')}>{t.zh.peRatio}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'forward_pe'} direction={sortKey === 'forward_pe' ? sortDirection : 'desc'} onClick={() => handleSort('forward_pe')}>{t.zh.forwardPe}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'ps_ratio'} direction={sortKey === 'ps_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('ps_ratio')}>{t.zh.psRatio}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'pb_ratio'} direction={sortKey === 'pb_ratio' ? sortDirection : 'desc'} onClick={() => handleSort('pb_ratio')}>{t.zh.pbRatio}</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel active={sortKey === 'eps_ttm'} direction={sortKey === 'eps_ttm' ? sortDirection : 'desc'} onClick={() => handleSort('eps_ttm')}>{t.zh.epsTtm}</TableSortLabel>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {indexLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={13} align="center" className="py-8 text-green-400">{t.zh.loading}</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {indexLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={13} align="center" className="py-8 text-green-400">{t.zh.loading}</TableCell>
+                    ) : indexData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13} align="center" className="py-8 text-gray-400">{t.zh.noData}</TableCell>
+                      </TableRow>
+                    ) : (
+                      pagedIndexData.map((row, i) => (
+                        <TableRow key={i} className="hover:bg-green-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.no}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.symbol}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.name}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_price ? `$${row.ath_price.toFixed(2)}` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_date || '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.price ? `$${row.price.toFixed(2)}` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 }, color: row.change > 0 ? 'green' : row.change < 0 ? 'red' : 'inherit' }}>{row.change ? `${row.change > 0 ? '+' : ''}${row.change.toFixed(2)}%` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.weight ? `${row.weight.toFixed(2)}%` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.marketCap || '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pe_ratio ? row.pe_ratio.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.forward_pe ? row.forward_pe.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ps_ratio ? row.ps_ratio.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pb_ratio ? row.pb_ratio.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.eps_ttm ? row.eps_ttm.toFixed(2) : '-'}</TableCell>
                         </TableRow>
-                      ) : indexData.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={13} align="center" className="py-8 text-gray-400">{t.zh.noData}</TableCell>
-                        </TableRow>
-                      ) : (
-                        indexData.map((row, i) => (
-                          <TableRow key={i} className="hover:bg-green-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.no}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.symbol}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.name}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.weight ? `${row.weight.toFixed(2)}%` : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.price ? `$${row.price.toFixed(2)}` : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 }, color: row.change > 0 ? 'green' : row.change < 0 ? 'red' : 'inherit' }}>{row.change ? `${row.change > 0 ? '+' : ''}${row.change.toFixed(2)}%` : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.marketCap || '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_price ? `$${row.ath_price.toFixed(2)}` : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pe_ratio ? row.pe_ratio.toFixed(2) : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.eps_ttm ? row.eps_ttm.toFixed(2) : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ps_ratio ? row.ps_ratio.toFixed(2) : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pb_ratio ? row.pb_ratio.toFixed(2) : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.forward_pe ? row.forward_pe.toFixed(2) : '-'}</TableCell>
-                            <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_date || '-'}</TableCell>
-                          </TableRow>
-                        ))
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                {indexData.length > 0 && (
+                  <div className="relative flex flex-row flex-nowrap items-center w-full py-4 px-2 gap-2">
+                    <div className="flex-1 order-2 sm:order-1" />
+                    <div className="absolute left-1/2 -translate-x-1/2 flex justify-center items-center gap-2 flex-none mx-auto order-1 sm:order-2">
+                      {indexData.length > ITEMS_PER_PAGE && (
+                        <Pagination count={indexTotalPages} page={indexPage} onChange={(_, value) => setIndexPage(value)} color="primary" shape="rounded" siblingCount={0} boundaryCount={1} size="small" />
                       )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </>
+                    </div>
+                    <div className="flex-1 flex justify-end order-3">
+                      <span className="text-gray-500 text-xs sm:text-sm md:text-base whitespace-nowrap">显示 {(indexPage-1)*ITEMS_PER_PAGE+1} 到 {Math.min(indexPage*ITEMS_PER_PAGE, indexData.length)} ，共 {indexData.length.toLocaleString()} 条</span>
+                    </div>
+                  </div>
+                )}
+              </TableContainer>
             )}
+
             {activeTab === 'funds' && (
               <>
                 <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex flex-col gap-4 items-stretch">
@@ -706,6 +703,7 @@ export default function Home() {
                 </TableContainer>
               </>
             )}
+
             {activeTab === 'stocks' && (
               <>
                 <div className="mb-2 flex flex-col sm:flex-row items-center justify-between gap-2">
@@ -792,6 +790,7 @@ export default function Home() {
                 </TableContainer>
               </>
             )}
+
             <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-4 sm:p-6 mb-8 mt-6">
               <h2 className="text-lg sm:text-xl font-semibold text-indigo-700 mb-4">常见问题（QA）</h2>
               {[
@@ -816,49 +815,21 @@ export default function Home() {
                 { question: "MEGA 7+为啥没有9月11日以前的数据？", answer: "9月11日以前的数据未存入数据库，仅保存在个人邮箱。从9月12日起，每天数据会自动保存并可按日期查询。" },
                 { question: "MEGA 7+的数据来源？", answer: "数据来源于开源库 AKSHARE。" },
                 { question: "可以安装APP到手机/电脑吗？", answer: "可以。在手机浏览器中打开本网站，选择“分享” -> “添加到主屏幕”即可。在电脑浏览器中打开本网站，点击地址栏右侧的安装图标（+号），或通过浏览器菜单选择“安装应用”。" },
-              ].map((item, index) => (
-                <Accordion key={index}>
+              ].map((faq, i) => (
+                <Accordion key={i}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6" fontWeight="bold">{item.question}</Typography>
+                    <Typography variant="h6" fontWeight="bold">{faq.question}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Typography variant="body1" color="textSecondary">{item.answer}</Typography>
+                    <Typography variant="body1" color="textSecondary">{faq.answer}</Typography>
                   </AccordionDetails>
                 </Accordion>
               ))}
             </div>
-            <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-6 mb-8 mt-6">
-              <h2 className="text-xl font-semibold text-indigo-700 mb-4">留言反馈</h2>
-              <p className="text-gray-600 mb-4">有任何问题或建议，请留下您的信息。我们会尽快回复。</p>
-              {state.succeeded && (
-                <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-lg">感谢您的留言！我们会尽快回复。</div>
-              )}
-              <form onSubmit={onSubmit} className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">姓名</label>
-                    <input type="text" id="name" name="name" className="mt-1 block w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg transition" />
-                  </div>
-                  <div className="flex-1">
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">邮箱</label>
-                    <input type="email" id="email" name="email" className="mt-1 block w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg transition" />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700">留言 <span className="text-red-500">*</span></label>
-                  <textarea id="message" name="message" required rows={2} value={message} onChange={(e) => setMessage(e.target.value)} className="mt-1 block w-full border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 p-2 rounded-lg transition" />
-                </div>
-                <button type="submit" disabled={state.submitting || !message.trim()} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold shadow transition disabled:opacity-50">{state.submitting ? '发送中...' : '发送留言'}</button>
-              </form>
-            </div>
-            <div className="mt-6 text-left text-gray-400 text-xs">
-              <p>额度排序按人民币等值计算，美元汇率为7。</p>
-              <p>基金公司直销额度往往高于第三方渠道额度。第三方渠道一般只展示渠道额度。</p>
-              <p>数据来源：基金公司公告。</p>
-            </div>
           </div>
         </div>
       )}
+
       <Analytics />
     </>
   )

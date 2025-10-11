@@ -35,7 +35,7 @@ export default async function handler(
     console.log('DynamoDB query params:', params);
 
     const result = await client.send(new QueryCommand(params));
-    console.log('DynamoDB result:', result);
+    //console.log('DynamoDB result:', result);
 
     const constituents = [];
 
