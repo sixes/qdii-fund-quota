@@ -14,31 +14,10 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 
 def test_chrome_setup():
-    """Test Chrome setup for VPS environment"""
+    """Advanced Chrome/Anti-bot detection troubleshooting"""
     print("=" * 60)
-    print("CHROME/SELENIUM VPS COMPATIBILITY TEST")
+    print("ADVANCED ANTI-BOT DETECTION TROUBLESHOOTING")
     print("=" * 60)
-    
-    # Check Chrome installation
-    print("1. Checking Chrome installation...")
-    chrome_paths = [
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable', 
-        '/usr/bin/chromium-browser',
-        '/usr/bin/chromium'
-    ]
-    
-    chrome_found = False
-    for path in chrome_paths:
-        if os.path.exists(path):
-            print(f"   ✓ Chrome found at: {path}")
-            chrome_found = True
-            break
-    
-    if not chrome_found:
-        print("   ✗ Chrome not found! Install with:")
-        print("     sudo apt-get update && sudo apt-get install -y google-chrome-stable")
-        return False
     
     # Test Chrome options with enhanced anti-detection
     print("\n2. Testing Chrome options...")
@@ -88,42 +67,11 @@ def test_chrome_setup():
         # Remove webdriver property to avoid detection
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
-        # Test basic navigation
-        print("\n3. Testing basic navigation...")
-        driver.set_page_load_timeout(60)  # Longer timeout
-        driver.implicitly_wait(15)
+        # Set long timeout for problematic sites
+        driver.set_page_load_timeout(120)  # Even longer timeout
+        driver.implicitly_wait(20)
         
-        test_url = "https://httpbin.org/get"
-        print(f"   Loading test URL: {test_url}")
-        
-        start_time = time.time()
-        driver.get(test_url)
-        load_time = time.time() - start_time
-        
-        print(f"   ✓ Page loaded in {load_time:.2f}s")
-        print(f"   Page title: {driver.title}")
-        
-        # Test element finding
-        print("\n4. Testing element detection...")
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
-            print("   ✓ Can detect page elements")
-        except Exception as e:
-            print(f"   ✗ Element detection failed: {e}")
-            return False
-        
-        # Test JavaScript execution
-        print("\n5. Testing JavaScript execution...")
-        try:
-            ready_state = driver.execute_script("return document.readyState")
-            print(f"   ✓ JavaScript works, document.readyState: {ready_state}")
-        except Exception as e:
-            print(f"   ✗ JavaScript execution failed: {e}")
-            return False
-        
-        print("\n6. Testing target websites with progressive timeouts...")
+        print("\n   Testing target websites with detailed anti-bot analysis...")
         
         # Test with different strategies
         test_sites = [
@@ -135,11 +83,12 @@ def test_chrome_setup():
             print(f"\n   === Testing {site_name} ===")
             print(f"   URL: {url}")
             
-            # Try multiple strategies
+            # Try multiple strategies with detailed logging
             strategies = [
                 ("Quick load (30s)", 30),
-                ("Patient load (60s)", 60),
-                ("Very patient load (90s)", 90)
+                ("Patient load (60s)", 60), 
+                ("Very patient load (90s)", 90),
+                ("Ultra patient load (120s)", 120)
             ]
             
             success = False
@@ -148,50 +97,164 @@ def test_chrome_setup():
                     break
                     
                 try:
-                    print(f"   Trying {strategy_name}...")
+                    print(f"\n   🚀 Trying {strategy_name}...")
                     driver.set_page_load_timeout(timeout)
                     
+                    # First check if site is reachable via curl
+                    print(f"   📡 Testing HTTP accessibility...")
+                    try:
+                        import urllib.request
+                        req = urllib.request.Request(url, headers={
+                            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+                        })
+                        response = urllib.request.urlopen(req, timeout=10)
+                        print(f"   ✓ HTTP accessible: {response.code}, Content-Length: {response.headers.get('Content-Length', 'unknown')}")
+                    except Exception as http_e:
+                        print(f"   ✗ HTTP not accessible: {http_e}")
+                        print(f"   ⚠ Site may be blocking requests entirely")
+                        continue
+                    
+                    print(f"   🌐 Starting Chrome navigation...")
                     start_time = time.time()
-                    driver.get(url)
-                    load_time = time.time() - start_time
                     
-                    print(f"   Page loaded in {load_time:.2f}s")
+                    # Monitor navigation stages
+                    try:
+                        driver.get(url)
+                        nav_time = time.time() - start_time
+                        print(f"   ✓ Navigation completed in {nav_time:.2f}s")
+                    except Exception as nav_e:
+                        print(f"   ✗ Navigation failed: {nav_e}")
+                        
+                        # Analyze the specific error
+                        error_str = str(nav_e).lower()
+                        if "timeout" in error_str:
+                            if "renderer" in error_str:
+                                print(f"   💀 RENDERER TIMEOUT - Chrome process hanging")
+                                print(f"   🔍 Possible causes:")
+                                print(f"       • Anti-bot detection blocking Chrome")
+                                print(f"       • Heavy JavaScript execution")
+                                print(f"       • Resource loading issues")
+                            elif "page load" in error_str:
+                                print(f"   ⏰ PAGE LOAD TIMEOUT - Site taking too long")
+                                print(f"   🔍 Possible causes:")
+                                print(f"       • Slow server response")
+                                print(f"       • Large page size")
+                                print(f"       • Network issues")
+                            else:
+                                print(f"   ⏰ GENERIC TIMEOUT")
+                        elif "net::" in error_str:
+                            print(f"   🌐 NETWORK ERROR - Connection issues")
+                        elif "security" in error_str:
+                            print(f"   🔒 SECURITY ERROR - SSL/TLS issues")
+                        else:
+                            print(f"   ❓ UNKNOWN ERROR TYPE: {type(nav_e).__name__}")
+                        
+                        raise nav_e
                     
-                    # Wait for document ready
-                    WebDriverWait(driver, 15).until(
-                        lambda d: d.execute_script("return document.readyState") == "complete"
-                    )
+                    # Check document state
+                    print(f"   📄 Checking document state...")
+                    try:
+                        ready_state = driver.execute_script("return document.readyState")
+                        print(f"   Document ready state: {ready_state}")
+                        
+                        if ready_state != "complete":
+                            print(f"   ⏳ Waiting for document to complete...")
+                            WebDriverWait(driver, 15).until(
+                                lambda d: d.execute_script("return document.readyState") == "complete"
+                            )
+                            print(f"   ✓ Document completed")
+                    except Exception as doc_e:
+                        print(f"   ✗ Document state check failed: {doc_e}")
                     
-                    # Check page content
-                    page_source_length = len(driver.page_source)
+                    # Analyze page content
+                    print(f"   🔍 Analyzing page content...")
+                    page_source = driver.page_source
+                    page_source_length = len(page_source)
                     print(f"   Page source length: {page_source_length} characters")
+                    
+                    # Check for anti-bot indicators
+                    anti_bot_indicators = [
+                        ("Access Denied", "access denied"),
+                        ("Blocked", "blocked"),
+                        ("Captcha", "captcha"),
+                        ("Rate Limited", "rate limit"),
+                        ("Bot Detection", "bot"),
+                        ("Cloudflare", "cloudflare"),
+                        ("Security Check", "security check"),
+                        ("Forbidden", "403"),
+                    ]
+                    
+                    detected_blocks = []
+                    for indicator_name, indicator_text in anti_bot_indicators:
+                        if indicator_text.lower() in page_source.lower():
+                            detected_blocks.append(indicator_name)
+                    
+                    if detected_blocks:
+                        print(f"   🚫 ANTI-BOT DETECTION TRIGGERED: {', '.join(detected_blocks)}")
+                        print(f"   💡 The site is actively blocking Chrome/automated access")
+                        
+                        # Show some of the blocking content
+                        print(f"   📄 Page content preview:")
+                        preview = page_source[:500] if len(page_source) > 500 else page_source
+                        print(f"   '{preview}...'")
+                        
+                        success = False
+                        continue
+                    else:
+                        print(f"   ✓ No obvious anti-bot blocking detected")
                     
                     # Check for tables
                     tables = driver.find_elements(By.TAG_NAME, "table")
-                    print(f"   Found {len(tables)} tables")
+                    print(f"   📊 Found {len(tables)} tables")
+                    
+                    if len(tables) > 0:
+                        # Analyze first table
+                        first_table = tables[0]
+                        rows = first_table.find_elements(By.TAG_NAME, "tr")
+                        print(f"   📋 First table has {len(rows)} rows")
+                        
+                        if len(rows) > 5:  # Reasonable number of rows for stock data
+                            print(f"   ✅ Table structure looks good for stock data")
+                            success = True
+                        else:
+                            print(f"   ⚠ Table seems too small for stock data")
                     
                     # Check for specific content
                     if "sp500" in url.lower():
-                        # Look for S&P 500 specific content
-                        if "S&P 500" in driver.page_source or "SP500" in driver.page_source:
-                            print(f"   ✓ Found S&P 500 content")
+                        content_indicators = ["S&P 500", "SP500", "Standard & Poor", "stocks", "companies"]
+                        found_indicators = [ind for ind in content_indicators if ind.lower() in page_source.lower()]
+                        if found_indicators:
+                            print(f"   ✓ Found relevant content indicators: {', '.join(found_indicators)}")
+                            success = True
                         else:
                             print(f"   ⚠ No S&P 500 specific content found")
                     
-                    if len(tables) > 0 or page_source_length > 10000:
-                        print(f"   ✓ {site_name} loaded successfully with {strategy_name}")
-                        success = True
+                    if success:
+                        total_time = time.time() - start_time
+                        print(f"   🎉 {site_name} SUCCESS with {strategy_name} (total: {total_time:.2f}s)")
                     else:
-                        print(f"   ⚠ {site_name} loaded but content seems minimal")
+                        print(f"   ⚠ {site_name} loaded but content validation failed")
                         
                 except Exception as e:
-                    print(f"   ✗ {strategy_name} failed: {str(e)[:100]}...")
+                    print(f"   💥 {strategy_name} FAILED: {str(e)[:200]}...")
                     
-                    # Check if it's a timeout specifically
-                    if "timeout" in str(e).lower():
-                        print(f"   → Timeout detected, trying next strategy")
+                    # Detailed error analysis
+                    error_str = str(e).lower()
+                    print(f"   🔍 Error analysis:")
+                    if "timeout" in error_str and "renderer" in error_str:
+                        print(f"       • CHROME RENDERER HANGING - likely anti-bot detection")
+                        print(f"       • Site may be running anti-automation JavaScript")
+                        print(f"       • Chrome process stuck waiting for response")
+                    elif "timeout" in error_str:
+                        print(f"       • TIMEOUT - site taking too long to respond") 
+                    elif "connection" in error_str:
+                        print(f"       • CONNECTION ISSUE - network problem")
+                    elif "security" in error_str:
+                        print(f"       • SECURITY/SSL ISSUE")
                     else:
-                        print(f"   → Non-timeout error: {type(e).__name__}")
+                        print(f"       • UNKNOWN ERROR TYPE: {type(e).__name__}")
+                    
+                    print(f"   ⏭ Trying next strategy...")
             
             if not success:
                 print(f"   ❌ All strategies failed for {site_name}")
