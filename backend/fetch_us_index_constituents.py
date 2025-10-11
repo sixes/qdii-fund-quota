@@ -482,73 +482,101 @@ def get_proxy_config():
     return f"{proxy_type}://{proxy_host}:{proxy_port}"
 
 def fetch_batch_stock_data(symbols, use_proxy=False):
-    """Fetch ATH prices using yfinance batch API and ratios individually."""
+    """Fetch ATH prices and ratios using yfinance batch API with 50-symbol batches."""
     try:
-        logging.info(f"Fetching batch ATH data for {len(symbols)} symbols using yfinance...")
-        
-        if use_proxy:
-            # Set proxy environment variables for yfinance
-            import os
-            proxy_url = get_proxy_config()
-            os.environ['HTTP_PROXY'] = proxy_url
-            os.environ['HTTPS_PROXY'] = proxy_url
-        
-        # Use yfinance batch download for historical data only
-        symbols_str = ' '.join(symbols)
-        hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=True, timeout=30)
-        
-        if use_proxy:
-            # Clean up environment variables
-            import os
-            if 'HTTP_PROXY' in os.environ:
-                del os.environ['HTTP_PROXY']
-            if 'HTTPS_PROXY' in os.environ:
-                del os.environ['HTTPS_PROXY']
-        
         ath_data = {}
         ratios_data = {}
         
-        for symbol in symbols:
+        # Process symbols in batches for both ATH and ratios
+        batch_size = 50  # Same batch size for both ATH and ratios
+        total_batches = (len(symbols) + batch_size - 1) // batch_size
+        
+        logging.info(f"Fetching ATH and ratios data for {len(symbols)} symbols in {total_batches} batches of {batch_size}...")
+        
+        # First, fetch ATH data in batches
+        for batch_num in range(total_batches):
+            start_idx = batch_num * batch_size
+            end_idx = min((batch_num + 1) * batch_size, len(symbols))
+            batch_symbols = symbols[start_idx:end_idx]
+            
+            logging.info(f"Processing ATH batch {batch_num + 1}/{total_batches}: {len(batch_symbols)} symbols")
+            
             try:
-                # Extract ATH data with better handling
-                symbol_hist = None
-                try:
-                    if len(symbols) == 1:
-                        # Single symbol case
-                        symbol_hist = hist_data
-                    else:
-                        # Multiple symbols case - check if symbol exists in data
-                        if hasattr(hist_data, 'columns') and hasattr(hist_data.columns, 'get_level_values'):
-                            if symbol in hist_data.columns.get_level_values(0):
-                                symbol_hist = hist_data[symbol]
-                        elif symbol in hist_data.columns:
-                            symbol_hist = hist_data[symbol]
-                except Exception as e:
-                    logging.debug(f"Error extracting hist data for {symbol}: {e}")
-                    symbol_hist = None
+                if use_proxy:
+                    import os
+                    proxy_url = get_proxy_config()
+                    os.environ['HTTP_PROXY'] = proxy_url
+                    os.environ['HTTPS_PROXY'] = proxy_url
                 
-                if symbol_hist is not None and not symbol_hist.empty:
-                    ath_price = symbol_hist['High'].max()
-                    ath_date = symbol_hist[symbol_hist['High'] == ath_price].index[0].strftime('%Y-%m-%d')
-                    
-                    ath_data[symbol] = {
-                        "ath_price": float(ath_price),
-                        "ath_date": ath_date,
-                        "last_updated": datetime.now().strftime('%Y-%m-%d')
-                    }
+                # Use yfinance batch download for historical data
+                symbols_str = ' '.join(batch_symbols)
+                hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=False, timeout=30)
                 
-                # Skip ratios fetching in batch - causes too many rate limit issues
-                # We'll fetch ratios individually later as fallback
-                logging.debug(f"Skipping ratios in batch for {symbol} to avoid rate limits")
+                batch_ath_success = 0
+                for symbol in batch_symbols:
+                    try:
+                        # Extract ATH data with better handling
+                        symbol_hist = None
+                        try:
+                            if len(batch_symbols) == 1:
+                                # Single symbol case
+                                symbol_hist = hist_data
+                            else:
+                                # Multiple symbols case - check if symbol exists in data
+                                if hasattr(hist_data, 'columns') and hasattr(hist_data.columns, 'get_level_values'):
+                                    if symbol in hist_data.columns.get_level_values(0):
+                                        symbol_hist = hist_data[symbol]
+                                elif symbol in hist_data.columns:
+                                    symbol_hist = hist_data[symbol]
+                        except Exception as e:
+                            logging.debug(f"Error extracting hist data for {symbol}: {e}")
+                            symbol_hist = None
+                        
+                        if symbol_hist is not None and not symbol_hist.empty and 'High' in symbol_hist.columns:
+                            ath_price = symbol_hist['High'].max()
+                            ath_date = symbol_hist[symbol_hist['High'] == ath_price].index[0].strftime('%Y-%m-%d')
+                            
+                            ath_data[symbol] = {
+                                "ath_price": float(ath_price),
+                                "ath_date": ath_date,
+                                "last_updated": datetime.now().strftime('%Y-%m-%d')
+                            }
+                            batch_ath_success += 1
+                        
+                        # Minimal delay between symbols
+                        time.sleep(0.1)
+                        
+                    except Exception as e:
+                        logging.debug(f"Failed to process ATH for {symbol}: {e}")
+                        continue
                 
-                # Minimal delay
-                time.sleep(0.1)
+                logging.info(f"ATH batch {batch_num + 1} completed: {batch_ath_success}/{len(batch_symbols)} symbols processed")
+                
+                if use_proxy:
+                    import os
+                    if 'HTTP_PROXY' in os.environ:
+                        del os.environ['HTTP_PROXY']
+                    if 'HTTPS_PROXY' in os.environ:
+                        del os.environ['HTTPS_PROXY']
+                
+                # Delay between ATH batches
+                if batch_num < total_batches - 1:
+                    delay = 5
+                    logging.info(f"Waiting {delay}s before next ATH batch...")
+                    time.sleep(delay)
                 
             except Exception as e:
-                logging.warning(f"Failed to process batch data for {symbol}: {e}")
+                logging.error(f"ATH batch {batch_num + 1} failed: {e}")
+                
+                if use_proxy:
+                    import os
+                    if 'HTTP_PROXY' in os.environ:
+                        del os.environ['HTTP_PROXY']
+                    if 'HTTPS_PROXY' in os.environ:
+                        del os.environ['HTTPS_PROXY']
                 continue
         
-        logging.info(f"Batch processing completed: ATH data for {len(ath_data)} symbols, ratios for {len(ratios_data)} symbols")
+        logging.info(f"ATH processing completed: {len(ath_data)}/{len(symbols)} symbols processed")
         
         # Fetch ratios for all symbols using batch Tickers API
         logging.info(f"Fetching financial ratios for all {len(symbols)} symbols using batch Tickers API...")
