@@ -12,23 +12,35 @@ import time
 import logging
 
 def create_http_session():
-    """Create HTTP session with realistic headers"""
+    """Create HTTP session with realistic headers and anti-detection measures"""
     session = requests.Session()
     
-    # Realistic browser headers (remove Accept-Encoding to let requests handle compression)
+    # Rotate user agents to avoid detection patterns
+    import random
+    user_agents = [
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    ]
+    
+    # Realistic browser headers (let requests handle compression automatically)
     session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'User-Agent': random.choice(user_agents),
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
         'DNT': '1',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
         'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Mode': 'navigate', 
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
         'Cache-Control': 'max-age=0'
     })
+    
+    # Add session persistence and connection pooling
+    session.verify = True
     
     return session
 
@@ -374,8 +386,29 @@ def fetch_alternative_sp500_data():
     logging.error("All alternative sources failed")
     return []
 
+def fetch_index_constituents_http(index_name, url):
+    """
+    Production-ready HTTP scraper for index constituents
+    Designed to be respectful and avoid detection
+    """
+    logging.info(f"Fetching {index_name} constituents via HTTP...")
+    
+    try:
+        constituents = fetch_slickcharts_http(url, index_name)
+        
+        if constituents:
+            logging.info(f"✅ Successfully extracted {len(constituents)} {index_name} constituents")
+            return constituents
+        else:
+            logging.error(f"❌ Failed to extract {index_name} constituents")
+            return []
+            
+    except Exception as e:
+        logging.error(f"❌ HTTP scraping failed for {index_name}: {e}")
+        return []
+
 def test_http_fallback():
-    """Test HTTP-based fallback methods"""
+    """Test HTTP-based scraping methods"""
     print("=" * 60)
     print("TESTING HTTP FALLBACK METHODS")
     print("=" * 60)
@@ -383,37 +416,31 @@ def test_http_fallback():
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     
-    # Test original sites with HTTP
-    test_sites = [
-        ("SlickCharts SP500", "https://www.slickcharts.com/sp500"),
-        ("SlickCharts Dow", "https://www.slickcharts.com/dowjones")
+    # Test index data extraction
+    test_indices = [
+        ("S&P 500", "https://www.slickcharts.com/sp500"),
+        ("Dow Jones", "https://www.slickcharts.com/dowjones"),
+        ("Nasdaq 100", "https://www.slickcharts.com/nasdaq100")
     ]
     
-    for site_name, url in test_sites:
-        print(f"\n🌐 Testing {site_name}...")
-        constituents = fetch_slickcharts_http(url, site_name)
+    for index_name, url in test_indices:
+        print(f"\n🌐 Testing {index_name}...")
+        constituents = fetch_index_constituents_http(index_name, url)
         
         if constituents:
             print(f"✅ SUCCESS: Found {len(constituents)} companies")
             print("📋 Sample data:")
             for i, company in enumerate(constituents[:3], 1):
-                print(f"   {i}. {company['symbol']} - {company['name']}")
+                print(f"   {i}. {company['symbol']} - {company['name']} ({company.get('weight', 0)}%)")
         else:
             print(f"❌ FAILED: No data extracted")
+        
+        # Respectful delay between different indices
+        if index_name != test_indices[-1][0]:
+            time.sleep(5)
     
-    # Test alternative sources
-    print(f"\n🔄 Testing alternative data sources...")
-    alt_data = fetch_alternative_sp500_data()
-    
-    if alt_data:
-        print(f"✅ ALTERNATIVE SUCCESS: Found {len(alt_data)} companies")
-        print("📋 Sample data:")
-        for i, company in enumerate(alt_data[:5], 1):
-            print(f"   {i}. {company['symbol']} - {company['name']}")
-    else:
-        print(f"❌ ALTERNATIVE FAILED: No alternative sources worked")
-    
-    print("\n" + "=" * 60)
+    print(f"\n🎯 HTTP scraping test completed")
+    print("=" * 60)
 
 if __name__ == "__main__":
     test_http_fallback()
