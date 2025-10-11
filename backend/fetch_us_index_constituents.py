@@ -495,7 +495,7 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
         
         # Use yfinance batch download for historical data only
         symbols_str = ' '.join(symbols)
-        hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=False, timeout=30)
+        hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=True, timeout=30)
         
         if use_proxy:
             # Clean up environment variables
@@ -550,72 +550,72 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
         
         logging.info(f"Batch processing completed: ATH data for {len(ath_data)} symbols, ratios for {len(ratios_data)} symbols")
         
-        # Since we skipped ratios in batch, fetch them individually with proper rate limiting
-        logging.info(f"Fetching ratios individually for {len(symbols)} symbols with rate limiting...")
+        # Fetch ratios for all symbols using batch Tickers API
+        logging.info(f"Fetching financial ratios for all {len(symbols)} symbols using batch Tickers API...")
         
-        # Try the most important 5 symbols only to avoid excessive rate limiting
-        priority_symbols = symbols[:5] if len(symbols) > 5 else symbols
-        logging.info(f"Focusing on {len(priority_symbols)} priority symbols for ratios to avoid rate limiting")
+        # Process symbols in batches to avoid overwhelming the API
+        batch_size = 50  # Reasonable batch size for Tickers API
+        total_batches = (len(symbols) + batch_size - 1) // batch_size
         
-        for i, symbol in enumerate(priority_symbols):
+        for batch_num in range(total_batches):
+            start_idx = batch_num * batch_size
+            end_idx = min((batch_num + 1) * batch_size, len(symbols))
+            batch_symbols = symbols[start_idx:end_idx]
+            
+            logging.info(f"Processing ratios batch {batch_num + 1}/{total_batches}: {len(batch_symbols)} symbols")
+            
             try:
-                # Set proxy for each individual request
+                # Set proxy for batch request
                 if use_proxy:
                     import os
                     proxy_url = get_proxy_config()
                     os.environ['HTTP_PROXY'] = proxy_url
                     os.environ['HTTPS_PROXY'] = proxy_url
                 
-                logging.info(f"Fetching ratios for {symbol} ({i+1}/{len(priority_symbols)})")
+                # Create Tickers object for batch processing
+                symbols_str = ' '.join(batch_symbols)
+                tickers = yf.Tickers(symbols_str)
                 
-                # Create individual ticker
-                ticker = yf.Ticker(symbol)
+                # Add delay between batch requests
+                time.sleep(3)
                 
-                # Force a short pause before info request
-                time.sleep(1)
-                
-                # Use fast_info for a quick check first
-                fast_info = ticker.fast_info
-                logging.info(f"Got fast_info for {symbol}")
-                
-                # Then try full info with timeout
-                try:
-                    info = ticker.info
-                    
-                    ratios = {
-                        'pe_ratio': info.get('trailingPE', None),
-                        'eps_ttm': info.get('trailingEps', None),
-                        'ps_ratio': info.get('priceToSalesTrailing12Months', None),
-                        'pb_ratio': info.get('priceToBook', None),
-                        'forward_pe': info.get('forwardPE', None)
-                    }
-                    
-                    if any(v is not None for v in ratios.values()):
-                        ratios_data[symbol] = ratios
-                        logging.info(f"SUCCESS: Got ratios for {symbol}: PE={ratios['pe_ratio']}, EPS={ratios['eps_ttm']}")
-                    else:
-                        logging.warning(f"No financial ratios found in info for {symbol}")
-                    
-                except Exception as e:
-                    logging.warning(f"Error getting full info for {symbol}: {e}")
-                    
-                    # Try to extract some data from fast_info as fallback
+                batch_success_count = 0
+                for symbol in batch_symbols:
                     try:
-                        last_price = fast_info.get('lastPrice', None)
-                        if last_price:
-                            ratios_data[symbol] = {
-                                'current_price': last_price,
-                                'pe_ratio': None,
-                                'eps_ttm': None,
-                                'ps_ratio': None,
-                                'pb_ratio': None,
-                                'forward_pe': None
+                        # Access ticker from batch object
+                        if hasattr(tickers, 'tickers') and symbol in tickers.tickers:
+                            ticker_obj = tickers.tickers[symbol]
+                            
+                            # Get financial ratios
+                            info = ticker_obj.info
+                            
+                            ratios = {
+                                'pe_ratio': info.get('trailingPE', None),
+                                'eps_ttm': info.get('trailingEps', None),
+                                'ps_ratio': info.get('priceToSalesTrailing12Months', None),
+                                'pb_ratio': info.get('priceToBook', None),
+                                'forward_pe': info.get('forwardPE', None)
                             }
-                            logging.info(f"Added basic price data for {symbol} as fallback")
-                    except:
-                        pass
+                            
+                            # Only add if we got at least one valid ratio
+                            if any(v is not None for v in ratios.values()):
+                                ratios_data[symbol] = ratios
+                                batch_success_count += 1
+                                
+                                # Log success for first few symbols in batch
+                                if batch_success_count <= 3:
+                                    logging.info(f"SUCCESS: Got ratios from batch for {symbol}: PE={ratios['pe_ratio']}")
+                            
+                            # Small delay between symbols in batch
+                            time.sleep(0.2)
+                            
+                    except Exception as e:
+                        logging.debug(f"Failed to get ratios for {symbol} in batch: {e}")
+                        continue
                 
-                # Clean up proxy env vars
+                logging.info(f"Batch {batch_num + 1} completed: {batch_success_count}/{len(batch_symbols)} ratios fetched")
+                
+                # Clean up proxy env vars after batch
                 if use_proxy:
                     import os
                     if 'HTTP_PROXY' in os.environ:
@@ -623,20 +623,28 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
                     if 'HTTPS_PROXY' in os.environ:
                         del os.environ['HTTPS_PROXY']
                 
-                # Long delay between requests to avoid rate limiting
-                time.sleep(5)
+                # Delay between batches to be respectful to the API
+                if batch_num < total_batches - 1:
+                    delay = 10
+                    logging.info(f"Waiting {delay}s before next ratios batch...")
+                    time.sleep(delay)
                 
             except Exception as e:
-                logging.warning(f"Failed to get ratios for {symbol}: {e}")
-                # Clean up proxy env vars on error
+                logging.error(f"Ratios batch {batch_num + 1} failed: {e}")
+                
+                # Clean up proxy on error
                 if use_proxy:
                     import os
                     if 'HTTP_PROXY' in os.environ:
                         del os.environ['HTTP_PROXY']
                     if 'HTTPS_PROXY' in os.environ:
                         del os.environ['HTTPS_PROXY']
-                # Even longer delay on error
-                time.sleep(8)
+                
+                # Continue with next batch even if this one failed
+                continue
+        
+        total_ratios_fetched = len(ratios_data)
+        logging.info(f"Completed batch ratios fetching: {total_ratios_fetched}/{len(symbols)} symbols processed")
         
         return ath_data, ratios_data
         
@@ -754,245 +762,6 @@ def merge_market_cap_data(slickcharts_data, stockanalysis_data):
     logging.info(f"Updated market cap for {updated_count}/{len(slickcharts_data)} SlickCharts entries")
     return slickcharts_data
 
-def process_single_index(index_key, index_info):
-    """Process a single index: fetch from both sources and compare."""
-    logging.info(f"Processing {index_info['name']}...")
-    
-    start_time = datetime.now()
-    
-    # Fetch from SlickCharts
-    slickcharts_data = fetch_slickcharts_data(index_info["slickcharts_url"], index_info["name"])
-    
-    # Fetch from StockAnalysis
-    stockanalysis_data = fetch_stockanalysis_data(index_info["stockanalysis_url"], index_info["name"])
-    
-    # Merge market cap data from StockAnalysis into SlickCharts
-    if slickcharts_data and stockanalysis_data:
-        slickcharts_data = merge_market_cap_data(slickcharts_data, stockanalysis_data)
-    
-    # Save SlickCharts data (step 5 requirement)
-    if slickcharts_data:
-        slick_path = os.path.join(os.path.dirname(__file__), index_info["slickcharts_filename"])
-        try:
-            with open(slick_path, "w", encoding="utf-8") as f:
-                json.dump(slickcharts_data, f, ensure_ascii=False, indent=2)
-            logging.info(f"Saved {len(slickcharts_data)} {index_info['name']} SlickCharts constituents to {slick_path}")
-        except Exception as e:
-            logging.error(f"Failed to save SlickCharts data for {index_info['name']}: {e}")
-    
-    # Save StockAnalysis data (optional)
-    if stockanalysis_data:
-        stock_path = os.path.join(os.path.dirname(__file__), index_info["stockanalysis_filename"])
-        try:
-            with open(stock_path, "w", encoding="utf-8") as f:
-                json.dump(stockanalysis_data, f, ensure_ascii=False, indent=2)
-            logging.info(f"Saved {len(stockanalysis_data)} {index_info['name']} StockAnalysis constituents to {stock_path}")
-        except Exception as e:
-            logging.error(f"Failed to save StockAnalysis data for {index_info['name']}: {e}")
-    
-    # Compare consistency
-    is_consistent = compare_constituents(slickcharts_data, stockanalysis_data, index_info['name'])
-    
-    elapsed = (datetime.now() - start_time).total_seconds()
-    logging.info(f"{index_info['name']} processing completed in {elapsed:.1f}s")
-    
-    return {
-        "slickcharts_count": len(slickcharts_data) if slickcharts_data else 0,
-        "stockanalysis_count": len(stockanalysis_data) if stockanalysis_data else 0,
-        "consistent": is_consistent,
-        "slickcharts_data": slickcharts_data
-    }
-
-def fetch_ath_data_batch(all_symbols_list, ath_batch_size, use_proxy=False):
-    """Fetch ATH data for all symbols using batch API"""
-    logging.info(f"Fetching ATH prices using batch API for {len(all_symbols_list)} symbols...")
-    
-    all_ath_data = {}
-    total_ath_success = 0
-    total_ath_failed = 0
-    
-    for i in range(0, len(all_symbols_list), ath_batch_size):
-        batch_symbols = all_symbols_list[i:i+ath_batch_size]
-        batch_num = i//ath_batch_size + 1
-        total_batches = (len(all_symbols_list) + ath_batch_size - 1)//ath_batch_size
-        
-        logging.info(f"Processing ATH batch {batch_num}/{total_batches}: {len(batch_symbols)} symbols")
-        
-        if use_proxy:
-            import os
-            proxy_url = get_proxy_config()
-            os.environ['HTTP_PROXY'] = proxy_url
-            os.environ['HTTPS_PROXY'] = proxy_url
-        
-        try:
-            symbols_str = ' '.join(batch_symbols)
-            hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=False, timeout=30)
-            
-            for symbol in batch_symbols:
-                try:
-                    symbol_hist = None
-                    if len(batch_symbols) == 1:
-                        symbol_hist = hist_data
-                    elif hasattr(hist_data, 'columns') and hasattr(hist_data.columns, 'get_level_values'):
-                        if symbol in hist_data.columns.get_level_values(0):
-                            symbol_hist = hist_data[symbol]
-                    
-                    if symbol_hist is not None and not symbol_hist.empty and 'High' in symbol_hist.columns:
-                        ath_price = symbol_hist['High'].max()
-                        ath_date = symbol_hist[symbol_hist['High'] == ath_price].index[0].strftime('%Y-%m-%d')
-                        
-                        all_ath_data[symbol] = {
-                            "ath_price": float(ath_price),
-                            "ath_date": ath_date
-                        }
-                        total_ath_success += 1
-                    else:
-                        total_ath_failed += 1
-                except Exception as e:
-                    logging.warning(f"Failed to process ATH for {symbol}: {e}")
-                    total_ath_failed += 1
-            
-        except Exception as e:
-            logging.error(f"ATH batch download failed: {e}")
-            total_ath_failed += len(batch_symbols)
-        
-        if use_proxy:
-            import os
-            if 'HTTP_PROXY' in os.environ:
-                del os.environ['HTTP_PROXY']
-            if 'HTTPS_PROXY' in os.environ:
-                del os.environ['HTTPS_PROXY']
-        
-        if i + ath_batch_size < len(all_symbols_list):
-            delay = 10
-            logging.info(f"Waiting {delay}s before next ATH batch...")
-            time.sleep(delay)
-    
-    logging.info(f"ATH processing completed: {total_ath_success} success, {total_ath_failed} failed")
-    return all_ath_data, total_ath_success, total_ath_failed
-
-def fetch_ratios_data_batch(all_symbols_list, ratio_batch_size, use_proxy=False):
-    """Fetch financial ratios for all symbols using batch Tickers API"""
-    logging.info(f"Fetching financial ratios for all {len(all_symbols_list)} symbols using batch Tickers API...")
-    
-    ratios_data = {}
-    total_ratios_success = 0
-    total_ratios_failed = 0
-    
-    for batch_start in range(0, len(all_symbols_list), ratio_batch_size):
-        batch_symbols = all_symbols_list[batch_start:batch_start + ratio_batch_size]
-        batch_num = (batch_start // ratio_batch_size) + 1
-        total_ratio_batches = (len(all_symbols_list) + ratio_batch_size - 1) // ratio_batch_size
-        
-        logging.info(f"Processing ratios batch {batch_num}/{total_ratio_batches}: {len(batch_symbols)} symbols")
-        
-        try:
-            if use_proxy:
-                import os
-                proxy_url = get_proxy_config()
-                os.environ['HTTP_PROXY'] = proxy_url
-                os.environ['HTTPS_PROXY'] = proxy_url
-            
-            symbols_str = ' '.join(batch_symbols)
-            logging.info(f"Creating Tickers batch object for batch {batch_num} with {len(batch_symbols)} symbols")
-            
-            tickers = yf.Tickers(symbols_str)
-            time.sleep(3)
-            
-            batch_success_count = 0
-            for symbol in batch_symbols:
-                try:
-                    if hasattr(tickers, 'tickers') and symbol in tickers.tickers:
-                        ticker_obj = tickers.tickers[symbol]
-                        
-                        try:
-                            info = ticker_obj.info
-                            
-                            ratios = {
-                                'pe_ratio': info.get('trailingPE', None),
-                                'eps_ttm': info.get('trailingEps', None),
-                                'ps_ratio': info.get('priceToSalesTrailing12Months', None),
-                                'pb_ratio': info.get('priceToBook', None),
-                                'forward_pe': info.get('forwardPE', None)
-                            }
-                            
-                            if any(v is not None for v in ratios.values()):
-                                ratios_data[symbol] = ratios
-                                batch_success_count += 1
-                                total_ratios_success += 1
-                                if batch_success_count <= 3:
-                                    logging.info(f"SUCCESS: Got ratios from batch for {symbol}: PE={ratios['pe_ratio']}")
-                            else:
-                                total_ratios_failed += 1
-                        except Exception as e:
-                            logging.debug(f"Failed to get info from batch ticker for {symbol}: {e}")
-                            total_ratios_failed += 1
-                    else:
-                        total_ratios_failed += 1
-                    
-                    time.sleep(0.5)
-                    
-                except Exception as e:
-                    logging.debug(f"Error processing batch ticker for {symbol}: {e}")
-                    total_ratios_failed += 1
-            
-            logging.info(f"Batch {batch_num} completed: {batch_success_count}/{len(batch_symbols)} ratios fetched")
-            
-            if use_proxy:
-                import os
-                if 'HTTP_PROXY' in os.environ:
-                    del os.environ['HTTP_PROXY']
-                if 'HTTPS_PROXY' in os.environ:
-                    del os.environ['HTTPS_PROXY']
-            
-            if batch_start + ratio_batch_size < len(all_symbols_list):
-                delay = 10
-                logging.info(f"Waiting {delay}s before next ratios batch...")
-                time.sleep(delay)
-            
-        except Exception as e:
-            logging.error(f"Ratios batch {batch_num} failed: {e}")
-            total_ratios_failed += len(batch_symbols)
-            
-            if use_proxy:
-                import os
-                if 'HTTP_PROXY' in os.environ:
-                    del os.environ['HTTP_PROXY']
-                if 'HTTPS_PROXY' in os.environ:
-                    del os.environ['HTTPS_PROXY']
-    
-    logging.info(f"Ratios processing completed: {total_ratios_success} success, {total_ratios_failed} failed")
-    return ratios_data, total_ratios_success, total_ratios_failed
-
-def process_indices_data(target_index, use_proxy):
-    """Process constituent data from all sources"""
-    if target_index:
-        indices_to_process = {target_index: INDICES[target_index]}
-        logging.info(f"Processing single index: {INDICES[target_index]['name']}")
-    else:
-        indices_to_process = INDICES
-        logging.info("Starting US Index Constituents extraction and comparison...")
-    
-    results = {}
-    
-    for index_key, index_info in indices_to_process.items():
-        try:
-            result = process_single_index(index_key, index_info)
-            results[index_key] = result
-        except Exception as e:
-            logging.error(f"Failed to process {index_info['name']}: {e}")
-            results[index_key] = {
-                "slickcharts_count": 0,
-                "stockanalysis_count": 0,
-                "consistent": False,
-                "slickcharts_data": []
-            }
-        
-        if index_key != list(indices_to_process.keys())[-1]:
-            time.sleep(2)
-    
-    return results, indices_to_process
-
 def fetch_all_market_data(all_symbols, ath_batch_size, ratio_batch_size, use_proxy):
     """Fetch ATH and ratios data for all symbols"""
     if not all_symbols:
@@ -1001,97 +770,16 @@ def fetch_all_market_data(all_symbols, ath_batch_size, ratio_batch_size, use_pro
     all_symbols_list = list(all_symbols)
     logging.info(f"Fetching data for {len(all_symbols_list)} unique symbols...")
     
-    # Fetch ratios data first (it takes longer)
-    ratios_data, total_ratios_success, total_ratios_failed = fetch_ratios_data_batch(all_symbols_list, ratio_batch_size, use_proxy)
+    # Use existing batch stock data function
+    ath_data, ratios_data = fetch_batch_stock_data(all_symbols_list, use_proxy)
     
-    # Fetch ATH data
-    ath_data, total_ath_success, total_ath_failed = fetch_ath_data_batch(all_symbols_list, ath_batch_size, use_proxy)
+    # Count success/failure
+    total_ath_success = len(ath_data)
+    total_ath_failed = len(all_symbols_list) - total_ath_success
+    total_ratios_success = len(ratios_data)
+    total_ratios_failed = len(all_symbols_list) - total_ratios_success
     
     return ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed
-
-def update_constituents_files(results, indices_to_process, ath_data, ratios_data):
-    """Update constituent files with enhanced data"""
-    for index_key, result in results.items():
-        if result.get("slickcharts_data"):
-            index_info = indices_to_process[index_key]
-            updated_data = result["slickcharts_data"]
-            
-            if ath_data:
-                updated_data = add_ath_data_to_constituents(updated_data, ath_data)
-            
-            if ratios_data:
-                updated_data = add_financial_ratios_to_constituents(updated_data, ratios_data)
-            
-            slick_path = os.path.join(os.path.dirname(__file__), index_info["slickcharts_filename"])
-            try:
-                with open(slick_path, "w", encoding="utf-8") as f:
-                    json.dump(updated_data, f, ensure_ascii=False, indent=2)
-                logging.info(f"Updated {index_info['name']} file with ATH and financial ratios data")
-            except Exception as e:
-                logging.error(f"Failed to update {index_info['name']} file with enhanced data: {e}")
-
-def save_all_to_dynamodb(results, indices_to_process):
-    """Save all results to DynamoDB"""
-    dynamodb_table = create_dynamodb_table()
-    total_dynamodb_saved = 0
-    
-    if dynamodb_table:
-        for index_key, result in results.items():
-            if result.get("slickcharts_data"):
-                index_name = indices_to_process[index_key]["name"].replace(" ", "_")
-                saved_count = save_to_dynamodb(dynamodb_table, index_name, result["slickcharts_data"])
-                total_dynamodb_saved += saved_count
-    
-    return total_dynamodb_saved
-
-def print_final_summary(results, indices_to_process, total_elapsed, target_index, 
-                       total_symbols, ath_success_count, ath_failed_count, 
-                       ratios_success_count, ratios_failed_count, total_dynamodb_saved):
-    """Print comprehensive final summary"""
-    logging.info("=" * 60)
-    logging.info("FINAL SUMMARY")
-    logging.info("=" * 60)
-    
-    all_consistent = True
-    total_constituents = 0
-    
-    for index_key, result in results.items():
-        name = indices_to_process[index_key]["name"]
-        slick_count = result["slickcharts_count"]
-        stock_count = result["stockanalysis_count"]
-        consistent = result["consistent"]
-        total_constituents += slick_count
-        
-        # Enhanced readability with match ratio
-        match_count = min(slick_count, stock_count) if consistent else "MISMATCH"
-        status = "✓ CONSISTENT" if consistent else "✗ INCONSISTENT"
-        
-        logging.info(f"{name}:")
-        logging.info(f"  SlickCharts: {slick_count} constituents")
-        logging.info(f"  StockAnalysis: {stock_count} constituents")
-        logging.info(f"  Consistency: {match_count}/{slick_count} - {status}")
-        
-        if not consistent:
-            all_consistent = False
-    
-    logging.info(f"Data Enhancement:")
-    logging.info(f"  ATH Prices: {ath_success_count}/{total_symbols} success ({ath_failed_count} failed)")
-    logging.info(f"  Financial Ratios: {ratios_success_count}/{total_symbols} success ({ratios_failed_count} failed)")
-    logging.info(f"  DynamoDB Records: {total_dynamodb_saved} saved")
-    
-    processed_count = len(indices_to_process)
-    logging.info(f"Total execution time: {total_elapsed:.1f}s")
-    
-    if target_index:
-        if all_consistent:
-            logging.info(f"🎉 {indices_to_process[target_index]['name']} data is consistent between sources!")
-        else:
-            logging.error(f"⚠️  {indices_to_process[target_index]['name']} shows inconsistencies. Check logs above for details.")
-    else:
-        if all_consistent:
-            logging.info("🎉 All indices show consistent data between sources!")
-        else:
-            logging.error("⚠️  Some indices show inconsistencies. Check logs above for details.")
 
 def create_http_session_fallback():
     """Create HTTP session for fallback scraping when Chrome fails"""
@@ -1213,6 +901,278 @@ def fetch_slickcharts_http_fallback(url, index_name):
 
 
 
+def load_existing_data_from_dynamodb(target_index):
+    """Step 1: Read all existing data from DynamoDB into a map"""
+    logging.info("=" * 60)
+    logging.info("STEP 1: LOADING EXISTING DATA FROM DYNAMODB")
+    logging.info("=" * 60)
+    
+    existing_data = {}
+    dynamodb_table = create_dynamodb_table()
+    
+    if not dynamodb_table:
+        logging.warning("DynamoDB table not available, starting with empty data")
+        return existing_data
+    
+    indices_to_load = [target_index] if target_index else list(INDICES.keys())
+    
+    for index_key in indices_to_load:
+        index_name = INDICES[index_key]["name"].replace(" ", "_").upper()
+        logging.info(f"Loading existing data for {INDICES[index_key]['name']}...")
+        
+        try:
+            # Query all constituents for this index
+            response = dynamodb_table.query(
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('pk').eq(f"INDEX#{index_name}")
+            )
+            
+            constituents = []
+            for item in response['Items']:
+                constituent = {
+                    'no': int(item.get('no', 0)),
+                    'symbol': item.get('symbol', ''),
+                    'name': item.get('name', ''),
+                    'weight': float(item.get('weight', 0)),
+                    'price': float(item.get('price', 0)),
+                    'change': float(item.get('change', 0)),
+                    'marketCap': item.get('market_cap', ''),
+                    'ath_price': float(item.get('ath_price', 0)) if item.get('ath_price') else None,
+                    'ath_date': item.get('ath_date'),
+                    'pe_ratio': float(item.get('pe_ratio', 0)) if item.get('pe_ratio') else None,
+                    'eps_ttm': float(item.get('eps_ttm', 0)) if item.get('eps_ttm') else None,
+                    'ps_ratio': float(item.get('ps_ratio', 0)) if item.get('ps_ratio') else None,
+                    'pb_ratio': float(item.get('pb_ratio', 0)) if item.get('pb_ratio') else None,
+                    'forward_pe': float(item.get('forward_pe', 0)) if item.get('forward_pe') else None,
+                }
+                constituents.append(constituent)
+            
+            existing_data[index_key] = constituents
+            logging.info(f"Loaded {len(constituents)} existing constituents for {INDICES[index_key]['name']}")
+            
+        except Exception as e:
+            logging.error(f"Failed to load existing data for {INDICES[index_key]['name']}: {e}")
+            existing_data[index_key] = []
+    
+    total_existing = sum(len(constituents) for constituents in existing_data.values())
+    logging.info(f"Total existing constituents loaded: {total_existing}")
+    
+    return existing_data
+
+def update_ath_and_ratios_data(existing_data, use_proxy, ath_batch_size, ratio_batch_size):
+    """Step 2: Update ATH prices and financial ratios for all constituents"""
+    logging.info("=" * 60)
+    logging.info("STEP 2: UPDATING ATH PRICES AND FINANCIAL RATIOS")
+    logging.info("=" * 60)
+    
+    # Collect all unique symbols from existing data
+    all_symbols = set()
+    for index_constituents in existing_data.values():
+        for constituent in index_constituents:
+            if constituent.get('symbol'):
+                all_symbols.add(constituent['symbol'])
+    
+    if not all_symbols:
+        logging.info("No existing symbols found, skipping ATH and ratios update")
+        return {}, {}, 0, 0, 0, 0
+    
+    logging.info(f"Updating ATH and ratios for {len(all_symbols)} unique symbols...")
+    
+    # Fetch updated market data
+    ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed = fetch_all_market_data(
+        all_symbols, ath_batch_size, ratio_batch_size, use_proxy)
+    
+    # Update existing data with new ATH and ratios
+    for index_key, constituents in existing_data.items():
+        for constituent in constituents:
+            symbol = constituent.get('symbol')
+            if symbol:
+                # Update ATH data
+                if symbol in ath_data:
+                    constituent['ath_price'] = ath_data[symbol]['ath_price']
+                    constituent['ath_date'] = ath_data[symbol]['ath_date']
+                
+                # Update ratios data
+                if symbol in ratios_data:
+                    ratios = ratios_data[symbol]
+                    constituent['pe_ratio'] = ratios.get('pe_ratio')
+                    constituent['eps_ttm'] = ratios.get('eps_ttm')
+                    constituent['ps_ratio'] = ratios.get('ps_ratio')
+                    constituent['pb_ratio'] = ratios.get('pb_ratio')
+                    constituent['forward_pe'] = ratios.get('forward_pe')
+    
+    logging.info(f"ATH update: {total_ath_success} success, {total_ath_failed} failed")
+    logging.info(f"Ratios update: {total_ratios_success} success, {total_ratios_failed} failed")
+    
+    return ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed
+
+def scrape_and_compare_constituents(existing_data, target_index):
+    """Step 3: Scrape websites and determine changes (add/remove/update)"""
+    logging.info("=" * 60)
+    logging.info("STEP 3: SCRAPING WEBSITES AND ANALYZING CHANGES")
+    logging.info("=" * 60)
+    
+    indices_to_process = {target_index: INDICES[target_index]} if target_index else INDICES
+    changes_summary = {}
+    updated_data = {}
+    
+    for index_key, index_info in indices_to_process.items():
+        logging.info(f"Processing {index_info['name']}...")
+        
+        # Get existing constituents
+        existing_constituents = existing_data.get(index_key, [])
+        existing_symbols = {c['symbol']: c for c in existing_constituents if c.get('symbol')}
+        
+        # Scrape current data from websites
+        slickcharts_data = fetch_slickcharts_data(index_info["slickcharts_url"], index_info["name"])
+        stockanalysis_data = fetch_stockanalysis_data(index_info["stockanalysis_url"], index_info["name"])
+        
+        if not slickcharts_data:
+            logging.error(f"Failed to scrape SlickCharts for {index_info['name']}, keeping existing data")
+            updated_data[index_key] = existing_constituents
+            changes_summary[index_key] = {"added": 0, "removed": 0, "updated": 0, "unchanged": len(existing_constituents)}
+            continue
+        
+        # Merge market cap data from StockAnalysis
+        if stockanalysis_data:
+            slickcharts_data = merge_market_cap_data(slickcharts_data, stockanalysis_data)
+        
+        # Analyze changes
+        new_symbols = {c['symbol']: c for c in slickcharts_data if c.get('symbol')}
+        
+        added_symbols = set(new_symbols.keys()) - set(existing_symbols.keys())
+        removed_symbols = set(existing_symbols.keys()) - set(new_symbols.keys())
+        common_symbols = set(existing_symbols.keys()) & set(new_symbols.keys())
+        
+        # Create updated constituents list
+        updated_constituents = []
+        updated_count = 0
+        
+        for symbol, new_data in new_symbols.items():
+            if symbol in existing_symbols:
+                # Update existing constituent
+                existing_constituent = existing_symbols[symbol].copy()
+                
+                # Check if weight changed significantly (>0.01%)
+                old_weight = existing_constituent.get('weight', 0)
+                new_weight = new_data.get('weight', 0)
+                weight_changed = abs(old_weight - new_weight) > 0.01
+                
+                # Update core data from scraping
+                existing_constituent.update({
+                    'no': new_data.get('no', existing_constituent.get('no', 0)),
+                    'name': new_data.get('name', existing_constituent.get('name', '')),
+                    'weight': new_weight,
+                    'price': new_data.get('price', existing_constituent.get('price', 0)),
+                    'change': new_data.get('change', existing_constituent.get('change', 0)),
+                    'marketCap': new_data.get('marketCap', existing_constituent.get('marketCap', '')),
+                })
+                
+                if weight_changed:
+                    updated_count += 1
+                    logging.debug(f"Weight updated for {symbol}: {old_weight:.2f}% -> {new_weight:.2f}%")
+                
+                updated_constituents.append(existing_constituent)
+            else:
+                # Add new constituent (preserve any existing ATH/ratios data if symbol was previously tracked)
+                updated_constituents.append(new_data)
+        
+        updated_data[index_key] = updated_constituents
+        
+        changes_summary[index_key] = {
+            "added": len(added_symbols),
+            "removed": len(removed_symbols), 
+            "updated": updated_count,
+            "unchanged": len(common_symbols) - updated_count
+        }
+        
+        # Log changes
+        if added_symbols:
+            logging.info(f"{index_info['name']} - Added ({len(added_symbols)}): {sorted(added_symbols)}")
+        if removed_symbols:
+            logging.info(f"{index_info['name']} - Removed ({len(removed_symbols)}): {sorted(removed_symbols)}")
+        if updated_count > 0:
+            logging.info(f"{index_info['name']} - Updated weights: {updated_count} constituents")
+        
+        logging.info(f"{index_info['name']} - Total constituents: {len(updated_constituents)}")
+    
+    return updated_data, changes_summary
+
+def update_dynamodb_with_changes(updated_data, target_index):
+    """Step 4: Update all data to DynamoDB"""
+    logging.info("=" * 60)
+    logging.info("STEP 4: UPDATING DYNAMODB WITH CHANGES")
+    logging.info("=" * 60)
+    
+    dynamodb_table = create_dynamodb_table()
+    if not dynamodb_table:
+        logging.error("DynamoDB table not available, cannot save data")
+        return 0
+    
+    indices_to_update = [target_index] if target_index else list(updated_data.keys())
+    total_saved = 0
+    
+    for index_key in indices_to_update:
+        if index_key not in updated_data:
+            continue
+            
+        index_name = INDICES[index_key]["name"].replace(" ", "_").upper()
+        constituents = updated_data[index_key]
+        
+        logging.info(f"Updating {INDICES[index_key]['name']} in DynamoDB...")
+        
+        try:
+            # Clear existing data for this index
+            logging.info(f"Clearing existing data for {INDICES[index_key]['name']}...")
+            
+            # Query all existing items
+            response = dynamodb_table.query(
+                KeyConditionExpression=boto3.dynamodb.conditions.Key('pk').eq(f"INDEX#{index_name}")
+            )
+            
+            # Delete existing items
+            with dynamodb_table.batch_writer() as batch:
+                for item in response['Items']:
+                    batch.delete_item(Key={'pk': item['pk'], 'sk': item['sk']})
+            
+            # Save updated data
+            saved_count = save_to_dynamodb(dynamodb_table, INDICES[index_key]["name"].replace(" ", "_"), constituents)
+            total_saved += saved_count
+            
+            logging.info(f"Updated {saved_count} constituents for {INDICES[index_key]['name']} in DynamoDB")
+            
+        except Exception as e:
+            logging.error(f"Failed to update DynamoDB for {INDICES[index_key]['name']}: {e}")
+    
+    logging.info(f"Total DynamoDB records updated: {total_saved}")
+    return total_saved
+
+def print_process_summary(changes_summary, total_ath_success, total_ath_failed, 
+                         total_ratios_success, total_ratios_failed, total_dynamodb_saved, total_elapsed):
+    """Step 5: Print comprehensive summary of all 4 steps"""
+    logging.info("=" * 60)
+    logging.info("PROCESS SUMMARY")
+    logging.info("=" * 60)
+    
+    # Step summaries
+    total_added = sum(changes['added'] for changes in changes_summary.values())
+    total_removed = sum(changes['removed'] for changes in changes_summary.values()) 
+    total_updated = sum(changes['updated'] for changes in changes_summary.values())
+    total_unchanged = sum(changes['unchanged'] for changes in changes_summary.values())
+    
+    summary_line = (f"Summary: Step1=LoadedFromDB, Step2=ATH({total_ath_success}✓/{total_ath_failed}✗)+Ratios({total_ratios_success}✓/{total_ratios_failed}✗), "
+                   f"Step3=Changes(+{total_added}/-{total_removed}/~{total_updated}/={total_unchanged}), Step4=SavedToDB({total_dynamodb_saved}), "
+                   f"Time={total_elapsed:.1f}s")
+    
+    logging.info("DETAILED BREAKDOWN:")
+    logging.info(f"Step 1 - Data Loading: Loaded existing constituents from DynamoDB")
+    logging.info(f"Step 2 - Market Data: ATH prices ({total_ath_success} success, {total_ath_failed} failed), Financial ratios ({total_ratios_success} success, {total_ratios_failed} failed)")
+    logging.info(f"Step 3 - Website Changes: Added {total_added}, Removed {total_removed}, Updated {total_updated}, Unchanged {total_unchanged}")
+    logging.info(f"Step 4 - Database Update: Saved {total_dynamodb_saved} records to DynamoDB")
+    logging.info(f"Total execution time: {total_elapsed:.1f}s")
+    logging.info("")
+    logging.info("ONE-LINE SUMMARY:")
+    logging.info(summary_line)
+
 def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size=50):
     # Configure logging with datetime - save to file and console
     import os
@@ -1233,9 +1193,9 @@ def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size
     )
     
     if target_index:
-        logging.info(f"Starting {INDICES[target_index]['name']} constituents extraction...")
+        logging.info(f"Starting {INDICES[target_index]['name']} constituents processing...")
     else:
-        logging.info("Starting US Index Constituents extraction...")
+        logging.info("Starting US Index Constituents processing...")
     
     logging.info(f"Logs will be saved to: {log_file}")
     
@@ -1249,34 +1209,25 @@ def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size
     
     total_start_time = datetime.now()
     
-    # Process indices data
-    results, indices_to_process = process_indices_data(target_index, use_proxy)
+    # Execute the 4-step process
     
-    # Collect all unique symbols
-    all_symbols = set()
-    for result in results.values():
-        if result.get("slickcharts_data"):
-            for item in result["slickcharts_data"]:
-                if item.get("symbol"):
-                    all_symbols.add(item["symbol"])
+    # Step 1: Load existing data from DynamoDB
+    existing_data = load_existing_data_from_dynamodb(target_index)
     
-    # Fetch market data
-    ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed = fetch_all_market_data(
-        all_symbols, ath_batch_size, ratio_batch_size, use_proxy)
+    # Step 2: Update ATH prices and financial ratios for existing constituents
+    ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed = update_ath_and_ratios_data(
+        existing_data, use_proxy, ath_batch_size, ratio_batch_size)
     
-    # Update files with enhanced data
-    update_constituents_files(results, indices_to_process, ath_data, ratios_data)
+    # Step 3: Scrape websites and analyze changes
+    updated_data, changes_summary = scrape_and_compare_constituents(existing_data, target_index)
     
-    # Save to DynamoDB
-    total_dynamodb_saved = save_all_to_dynamodb(results, indices_to_process)
+    # Step 4: Update DynamoDB with all changes
+    total_dynamodb_saved = update_dynamodb_with_changes(updated_data, target_index)
     
-    # Final summary
+    # Step 5: Print comprehensive summary
     total_elapsed = (datetime.now() - total_start_time).total_seconds()
-    total_symbols = len(all_symbols)
-    
-    print_final_summary(results, indices_to_process, total_elapsed, target_index,
-                       total_symbols, total_ath_success, total_ath_failed,
-                       total_ratios_success, total_ratios_failed, total_dynamodb_saved)
+    print_process_summary(changes_summary, total_ath_success, total_ath_failed,
+                         total_ratios_success, total_ratios_failed, total_dynamodb_saved, total_elapsed)
         
     send_health_check(success=True)
     
