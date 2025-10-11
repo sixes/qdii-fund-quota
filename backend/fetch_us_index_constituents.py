@@ -3,11 +3,6 @@ import json
 import os
 import logging
 from datetime import datetime
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
 import time
 import yfinance as yf
 from dotenv import load_dotenv
@@ -16,6 +11,9 @@ import urllib.request
 import boto3
 from botocore.exceptions import ClientError
 from decimal import Decimal
+import requests
+from bs4 import BeautifulSoup
+import random
 
 # Configuration for all indices
 INDICES = {
@@ -182,202 +180,110 @@ def save_to_dynamodb(table, index_name, constituents_data):
         logging.error(f"Failed to save {index_name} data to DynamoDB: {e}")
         return 0
 
-def build_driver(headless=True, disable_js=False):
-    """Build Chrome driver with anti-detection and VPS optimizations."""
-    opts = Options()
-    
-    # Essential headless options for VPS
-    if headless:
-        opts.add_argument("--headless=new")
-    
-    # Anti-detection options
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-gpu")
-    opts.add_argument("--disable-software-rasterizer")
-    opts.add_argument("--disable-background-timer-throttling")
-    opts.add_argument("--disable-backgrounding-occluded-windows")
-    opts.add_argument("--disable-renderer-backgrounding")
-    opts.add_argument("--disable-features=TranslateUI,VizDisplayCompositor")
-    opts.add_argument("--disable-ipc-flooding-protection")
-    opts.add_argument("--disable-blink-features=AutomationControlled")
-    opts.add_argument("--window-size=1920,1080")
-    opts.add_argument("--disable-images")
-    opts.add_argument("--disable-extensions")
-    opts.add_argument("--disable-plugins")
-    opts.add_argument("--disable-default-apps")
-    opts.add_argument("--disable-background-networking")
-    opts.add_argument("--disable-web-security")
-    
-    # Memory and performance optimization
-    opts.add_argument("--memory-pressure-off")
-    opts.add_argument("--max_old_space_size=4096")
-    opts.add_argument("--aggressive-cache-discard")
-    
-    # More realistic user agent for VPS
-    opts.add_argument("--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
-    
-    if disable_js:
-        opts.add_argument("--disable-javascript")
-    
-    # Enhanced preferences to avoid detection
-    prefs = {
-        "profile.managed_default_content_settings.images": 2,
-        "profile.default_content_setting_values": {
-            "notifications": 2,
-            "media_stream": 2,
-            "geolocation": 2,
-        },
-        "profile.default_content_settings.popups": 0
-    }
-    opts.add_experimental_option("prefs", prefs)
-    opts.add_experimental_option("useAutomationExtension", False)
-    opts.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
-    
-    # Create driver with enhanced error handling
-    try:
-        driver = webdriver.Chrome(options=opts)
-        
-        # Remove webdriver property to avoid detection
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        
-        # Set realistic timeouts based on test results
-        driver.set_page_load_timeout(90)  # From test: sites need 90s timeout
-        driver.implicitly_wait(15)
-        
-        return driver
-        
-    except Exception as e:
-        print(f"Failed to create Chrome driver: {e}")
-        raise
+
 
 def fetch_slickcharts_data(url, index_name, max_retries=3):
-    """Fetch data from SlickCharts using table parsing with retry logic."""
+    """Fetch data from SlickCharts using HTTP requests."""
     logging.info(f"Fetching {index_name} data from SlickCharts: {url}")
     
     for attempt in range(max_retries):
-        driver = build_driver(headless=True, disable_js=False)
-        
         try:
             start_time = datetime.now()
-            driver.get(url)
             
-            # Wait for page completion with VPS-tested timeout  
-            WebDriverWait(driver, 15).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            time.sleep(3)  # Additional wait for content to stabilize on VPS
+            session = create_http_session_fallback()
+            time.sleep(2)  # Respectful delay
             
-            # Try DOM table extraction first
-            constituents = parse_slickcharts_table(driver, index_name)
+            response = session.get(url, timeout=30)
+            response.raise_for_status()
             
-            if not constituents:
-                # Fallback to JavaScript extraction
-                logging.info(f"Table parsing failed for {index_name}, trying JavaScript extraction...")
-                html_content = driver.page_source
+            logging.info(f"SlickCharts HTTP response: {response.status_code}")
+            
+            # Parse HTML content
+            html_content = response.text
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Look for tables
+            tables = soup.find_all('table')
+            logging.info(f"Found {len(tables)} tables in SlickCharts HTML")
+            
+            if not tables:
+                # Try JavaScript extraction as fallback
                 constituents = parse_slickcharts_javascript(html_content, index_name)
+            else:
+                # Parse the main data table (usually the largest one)
+                main_table = max(tables, key=lambda t: len(t.find_all('tr')))
+                rows = main_table.find_all('tr')
+                
+                constituents = []
+                for idx, row in enumerate(rows[1:], 1):  # Skip header row
+                    try:
+                        cells = row.find_all(['td', 'th'])
+                        if len(cells) < 4:
+                            continue
+                        
+                        # Extract text from cells
+                        cell_texts = [cell.get_text(strip=True) for cell in cells]
+                        
+                        if len(cell_texts) >= 7:
+                            rank_text = cell_texts[0]
+                            name_text = cell_texts[1]
+                            symbol_text = cell_texts[2]
+                            weight_text = cell_texts[3]
+                            price_text = cell_texts[4] if len(cell_texts) > 4 else "0"
+                            
+                            # Parse values
+                            try:
+                                rank = int(re.sub(r'[^\d]', '', rank_text)) if rank_text.strip() else idx
+                            except:
+                                rank = idx
+                            
+                            try:
+                                weight = float(re.sub(r'[^\d.]', '', weight_text.replace('%', '')))
+                            except:
+                                weight = 0
+                            
+                            try:
+                                price = float(re.sub(r'[^\d.]', '', price_text))
+                            except:
+                                price = 0
+                            
+                            if symbol_text and name_text:
+                                constituents.append({
+                                    "no": rank,
+                                    "symbol": symbol_text,
+                                    "name": name_text,
+                                    "weight": weight,
+                                    "marketCap": 0,  # Will be filled from StockAnalysis
+                                    "price": price,
+                                    "change": 0,
+                                    "netChange": 0
+                                })
+                                
+                                # Log first few for verification
+                                if idx <= 3:
+                                    logging.info(f"SlickCharts Row {idx}: {symbol_text} - {name_text} ({weight}%)")
+                        
+                    except Exception as e:
+                        logging.debug(f"Error parsing SlickCharts row {idx}: {e}")
+                        continue
             
             elapsed = (datetime.now() - start_time).total_seconds()
             logging.info(f"SlickCharts {index_name}: extracted {len(constituents)} companies in {elapsed:.1f}s")
             
-            return constituents
+            if constituents:
+                return constituents
             
         except Exception as e:
-            logging.warning(f"SlickCharts extraction attempt {attempt + 1}/{max_retries} failed for {index_name}: {e}")
+            logging.warning(f"SlickCharts HTTP attempt {attempt + 1}/{max_retries} failed for {index_name}: {e}")
             if attempt < max_retries - 1:
-                logging.info(f"Retrying SlickCharts {index_name} in 2 seconds...")
-                time.sleep(2)
+                logging.info(f"Retrying SlickCharts {index_name} in 3 seconds...")
+                time.sleep(3)
             else:
-                logging.error(f"All {max_retries} attempts failed for SlickCharts {index_name}")
-        finally:
-            driver.quit()
+                logging.error(f"All {max_retries} HTTP attempts failed for SlickCharts {index_name}")
     
     return []
 
-def parse_slickcharts_table(driver, index_name):
-    """Parse SlickCharts HTML table."""
-    try:
-        # Wait for table to be present
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr"))
-        )
-        
-        rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
-        
-        if not rows:
-            logging.warning(f"No table rows found for {index_name}")
-            return []
-        
-        logging.info(f"Found {len(rows)} table rows for {index_name}")
-        
-        constituents = []
-        for idx, row in enumerate(rows, 1):
-            try:
-                cells = row.find_elements(By.TAG_NAME, "td")
-                if len(cells) < 7:
-                    continue
-                
-                # Parse table structure: rank, name, symbol, weight, price, net_change, percent_change
-                rank = cells[0].text.strip()
-                name_cell = cells[1].find_element(By.TAG_NAME, "a").text.strip() if cells[1].find_elements(By.TAG_NAME, "a") else cells[1].text.strip()
-                symbol_cell = cells[2].find_element(By.TAG_NAME, "a").text.strip() if cells[2].find_elements(By.TAG_NAME, "a") else cells[2].text.strip()
-                weight = cells[3].text.strip()
-                price_text = cells[4].text.strip()
-                net_change_text = cells[5].text.strip()
-                percent_change_text = cells[6].text.strip()
-                
-                # Parse numeric values
-                try:
-                    rank_num = int(rank) if rank.isdigit() else idx
-                except (ValueError, TypeError):
-                    rank_num = idx
-                
-                try:
-                    price = float(re.sub(r'[^\d.]', '', price_text))
-                except (ValueError, TypeError):
-                    price = 0
-                
-                try:
-                    net_change = float(re.sub(r'[^\d.-]', '', net_change_text))
-                except (ValueError, TypeError):
-                    net_change = 0
-                
-                try:
-                    percent_change = float(re.sub(r'[^\d.-]', '', percent_change_text.replace('(', '').replace(')', '')))
-                except (ValueError, TypeError):
-                    percent_change = 0
-                
-                try:
-                    weight_num = float(re.sub(r'[^\d.]', '', weight.replace('%', '')))
-                except (ValueError, TypeError):
-                    weight_num = 0
-                
-                # Debug logging for first few rows
-                if idx <= 3:
-                    logging.info(f"SlickCharts Row {idx}: symbol={symbol_cell}, name={name_cell}, weight={weight_num}%")
-                
-                if symbol_cell and name_cell:
-                    constituents.append({
-                        "no": rank_num,
-                        "symbol": symbol_cell,
-                        "name": name_cell,
-                        "marketCap": 0,
-                        "price": price,
-                        "change": percent_change,
-                        "weight": weight_num,
-                        "netChange": net_change
-                    })
-                    
-            except Exception as e:
-                logging.debug(f"Error parsing SlickCharts row {idx} for {index_name}: {e}")
-                continue
-        
-        logging.info(f"Successfully parsed {len(constituents)} companies from SlickCharts table for {index_name}")
-        return constituents
-        
-    except Exception as e:
-        logging.warning(f"SlickCharts table parsing failed for {index_name}: {e}")
-        return []
+
 
 def parse_slickcharts_javascript(html_content, index_name):
     """Parse SlickCharts JavaScript data as fallback."""
@@ -456,23 +362,97 @@ def parse_slickcharts_javascript(html_content, index_name):
         return []
 
 def fetch_stockanalysis_data(url, index_name, max_retries=3):
-    """Fetch data from StockAnalysis.com using DOM parsing with retry logic."""
+    """Fetch data from StockAnalysis.com using HTTP requests."""
     logging.info(f"Fetching {index_name} data from StockAnalysis: {url}")
     
     for attempt in range(max_retries):
-        driver = build_driver(headless=True, disable_js=True)
-        
         try:
             start_time = datetime.now()
-            driver.get(url)
             
-            # Wait for page completion with VPS-tested timeout
-            WebDriverWait(driver, 15).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            time.sleep(3)  # Additional wait for content to stabilize
+            session = create_http_session_fallback()
+            time.sleep(2)  # Respectful delay
             
-            constituents = parse_stockanalysis_table(driver, index_name)
+            response = session.get(url, timeout=30)
+            response.raise_for_status()
+            
+            logging.info(f"StockAnalysis HTTP response: {response.status_code}")
+            
+            # Parse HTML content
+            html_content = response.text
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Look for tables
+            tables = soup.find_all('table')
+            logging.info(f"Found {len(tables)} tables in StockAnalysis HTML")
+            
+            if not tables:
+                logging.warning(f"No tables found for StockAnalysis {index_name}")
+                return []
+            
+            # Parse the main data table (usually the largest one)
+            main_table = max(tables, key=lambda t: len(t.find_all('tr')))
+            rows = main_table.find_all('tr')
+            
+            # Filter out header rows and empty rows
+            valid_rows = []
+            for row in rows:
+                cells = row.find_all(['td', 'th'])
+                if len(cells) >= 6:  # Must have minimum required columns
+                    # Check if first cell contains a number (indicating data row)
+                    first_cell_text = cells[0].get_text(strip=True)
+                    if first_cell_text and (first_cell_text.isdigit() or first_cell_text in ['1', '2', '3']):
+                        valid_rows.append(row)
+            
+            logging.info(f"Filtered to {len(valid_rows)} valid data rows")
+            
+            constituents = []
+            for idx, row in enumerate(valid_rows, 1):
+                try:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) < 6:
+                        continue
+                    
+                    # Parse by position: id, ticker, name, market_cap, last_price, change_percent
+                    no = int(cells[0].get_text(strip=True)) if cells[0].get_text(strip=True).isdigit() else idx
+                    symbol = cells[1].get_text(strip=True)
+                    name = cells[2].get_text(strip=True)
+                    market_cap_text = cells[3].get_text(strip=True)
+                    price_text = cells[4].get_text(strip=True)
+                    change_text = cells[5].get_text(strip=True)
+                    
+                    # Keep market cap in original readable format
+                    market_cap = market_cap_text if market_cap_text and market_cap_text != '-' else "N/A"
+                    
+                    # Parse price and change
+                    try:
+                        price = float(re.sub(r'[^\d.]', '', price_text)) if price_text != '-' else 0
+                    except ValueError:
+                        price = 0
+                    
+                    try:
+                        change = float(re.sub(r'[^\d.-]', '', change_text)) if change_text != '-' else 0
+                    except ValueError:
+                        change = 0
+                    
+                    # Debug logging for first few rows
+                    if idx <= 3:
+                        logging.info(f"StockAnalysis Row {idx}: symbol='{symbol}', name='{name}', marketCap='{market_cap}', cells={len(cells)}")
+                    
+                    if symbol and symbol.strip():  # Ensure symbol is not empty
+                        constituents.append({
+                            "no": no,
+                            "symbol": symbol,
+                            "name": name,
+                            "marketCap": market_cap,
+                            "price": price,
+                            "change": change,
+                        })
+                    else:
+                        logging.warning(f"Skipping row {idx}: empty or invalid symbol '{symbol}'")
+                        
+                except Exception as e:
+                    logging.debug(f"Error parsing StockAnalysis row {idx} for {index_name}: {e}")
+                    continue
             
             elapsed = (datetime.now() - start_time).total_seconds()
             logging.info(f"StockAnalysis {index_name}: extracted {len(constituents)} companies in {elapsed:.1f}s")
@@ -480,113 +460,16 @@ def fetch_stockanalysis_data(url, index_name, max_retries=3):
             return constituents
             
         except Exception as e:
-            logging.warning(f"StockAnalysis extraction attempt {attempt + 1}/{max_retries} failed for {index_name}: {e}")
+            logging.warning(f"StockAnalysis HTTP attempt {attempt + 1}/{max_retries} failed for {index_name}: {e}")
             if attempt < max_retries - 1:
-                logging.info(f"Retrying StockAnalysis {index_name} in 2 seconds...")
-                time.sleep(2)
+                logging.info(f"Retrying StockAnalysis {index_name} in 3 seconds...")
+                time.sleep(3)
             else:
-                logging.error(f"All {max_retries} attempts failed for StockAnalysis {index_name}")
-        finally:
-            driver.quit()
+                logging.error(f"All {max_retries} HTTP attempts failed for StockAnalysis {index_name}")
     
     return []
 
-def parse_stockanalysis_table(driver, index_name):
-    """Parse StockAnalysis.com HTML table."""
-    try:
-        # Wait for table to be present
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "table tbody tr"))
-        )
-        
-        # Try different table selectors
-        table_selectors = ["table tbody tr", "tbody tr", "tr"]
-        
-        rows = []
-        for selector in table_selectors:
-            try:
-                found_rows = driver.find_elements(By.CSS_SELECTOR, selector)
-                if len(found_rows) > 10:
-                    rows = found_rows
-                    logging.info(f"Found {len(rows)} rows using selector: {selector}")
-                    # Filter out header rows and empty rows
-                    valid_rows = []
-                    for row in rows:
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        if len(cells) >= 6:  # Must have minimum required columns
-                            # Check if first cell contains a number (indicating data row)
-                            first_cell_text = cells[0].text.strip()
-                            if first_cell_text and (first_cell_text.isdigit() or first_cell_text in ['1', '2', '3']):
-                                valid_rows.append(row)
-                    rows = valid_rows
-                    logging.info(f"Filtered to {len(rows)} valid data rows")
-                    break
-            except Exception as e:
-                logging.debug(f"Selector '{selector}' failed: {e}")
-                continue
-        
-        if not rows:
-            logging.warning(f"No table rows found for {index_name}")
-            return []
-        
-        constituents = []
-        for idx, row in enumerate(rows, 1):
-            try:
-                cells = row.find_elements(By.TAG_NAME, "td")
-                if len(cells) < 6:
-                    continue
-                
-                # Parse by position: id, ticker, name, market_cap, last_price, change_percent
-                no = int(cells[0].text.strip()) if cells[0].text.strip().isdigit() else idx
-                symbol = cells[1].text.strip()
-                name = cells[2].text.strip()
-                market_cap_text = cells[3].text.strip()
-                price_text = cells[4].text.strip()
-                change_text = cells[5].text.strip()
-                
-                # Keep market cap in original readable format
-                market_cap = market_cap_text if market_cap_text and market_cap_text != '-' else "N/A"
-                
-                # Parse price and change
-                try:
-                    price = float(re.sub(r'[^\d.]', '', price_text)) if price_text != '-' else 0
-                except ValueError:
-                    price = 0
-                
-                try:
-                    change = float(re.sub(r'[^\d.-]', '', change_text)) if change_text != '-' else 0
-                except ValueError:
-                    change = 0
-                
-                # Debug logging for first few rows
-                if idx <= 3:
-                    logging.info(f"StockAnalysis Row {idx}: symbol='{symbol}', name='{name}', marketCap='{market_cap}', cells={len(cells)}")
-                    # Log cell contents for debugging
-                    for i, cell in enumerate(cells[:6]):
-                        logging.debug(f"  Cell {i}: '{cell.text.strip()}'")
-                
-                if symbol and symbol.strip():  # Ensure symbol is not empty
-                    constituents.append({
-                        "no": no,
-                        "symbol": symbol,
-                        "name": name,
-                        "marketCap": market_cap,
-                        "price": price,
-                        "change": change,
-                    })
-                else:
-                    logging.warning(f"Skipping row {idx}: empty or invalid symbol '{symbol}'")
-                    
-            except Exception as e:
-                logging.debug(f"Error parsing StockAnalysis row {idx} for {index_name}: {e}")
-                continue
-        
-        logging.info(f"Successfully parsed {len(constituents)} companies from StockAnalysis for {index_name}")
-        return constituents
-        
-    except Exception as e:
-        logging.warning(f"StockAnalysis table parsing failed for {index_name}: {e}")
-        return []
+
 
 def get_proxy_config():
     """Get proxy configuration from .env file."""
@@ -1299,6 +1182,126 @@ def print_final_summary(results, indices_to_process, total_elapsed, target_index
             logging.info("🎉 All indices show consistent data between sources!")
         else:
             logging.error("⚠️  Some indices show inconsistencies. Check logs above for details.")
+
+def create_http_session_fallback():
+    """Create HTTP session for fallback scraping when Chrome fails"""
+    import random
+    session = requests.Session()
+    
+    # Rotate user agents to avoid detection patterns
+    user_agents = [
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    ]
+    
+    # Realistic browser headers
+    session.headers.update({
+        'User-Agent': random.choice(user_agents),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0'
+    })
+    
+    return session
+
+def fetch_slickcharts_http_fallback(url, index_name):
+    """HTTP fallback for when Chrome/Selenium is blocked"""
+    logging.info(f"🌐 Using HTTP fallback for {index_name}: {url}")
+    
+    try:
+        session = create_http_session_fallback()
+        time.sleep(3)  # Respectful delay
+        
+        response = session.get(url, timeout=30)
+        response.raise_for_status()
+        
+        logging.info(f"HTTP fallback response: {response.status_code}")
+        
+        # Parse HTML content
+        html_content = response.text
+        soup = BeautifulSoup(html_content, 'html.parser')
+        
+        # Look for tables
+        tables = soup.find_all('table')
+        logging.info(f"HTTP fallback found {len(tables)} tables")
+        
+        if not tables:
+            logging.warning(f"No tables found in HTTP fallback for {index_name}")
+            return []
+        
+        # Parse the main data table (usually the largest one)
+        main_table = max(tables, key=lambda t: len(t.find_all('tr')))
+        rows = main_table.find_all('tr')
+        
+        constituents = []
+        for idx, row in enumerate(rows[1:], 1):  # Skip header row
+            try:
+                cells = row.find_all(['td', 'th'])
+                if len(cells) < 4:
+                    continue
+                
+                # Extract text from cells
+                cell_texts = [cell.get_text(strip=True) for cell in cells]
+                
+                if len(cell_texts) >= 7:
+                    rank_text = cell_texts[0]
+                    name_text = cell_texts[1]
+                    symbol_text = cell_texts[2]
+                    weight_text = cell_texts[3]
+                    price_text = cell_texts[4] if len(cell_texts) > 4 else "0"
+                    
+                    # Parse values
+                    try:
+                        rank = int(re.sub(r'[^\d]', '', rank_text)) if rank_text.strip() else idx
+                    except:
+                        rank = idx
+                    
+                    try:
+                        weight = float(re.sub(r'[^\d.]', '', weight_text.replace('%', '')))
+                    except:
+                        weight = 0
+                    
+                    try:
+                        price = float(re.sub(r'[^\d.]', '', price_text))
+                    except:
+                        price = 0
+                    
+                    if symbol_text and name_text:
+                        constituents.append({
+                            "no": rank,
+                            "symbol": symbol_text,
+                            "name": name_text,
+                            "weight": weight,
+                            "marketCap": 0,  # Will be filled from StockAnalysis
+                            "price": price,
+                            "change": 0,
+                            "netChange": 0
+                        })
+                        
+                        # Log first few for verification
+                        if idx <= 3:
+                            logging.info(f"HTTP Row {idx}: {symbol_text} - {name_text} ({weight}%)")
+                
+            except Exception as e:
+                logging.debug(f"Error parsing HTTP row {idx}: {e}")
+                continue
+        
+        logging.info(f"HTTP fallback extracted {len(constituents)} companies for {index_name}")
+        return constituents
+        
+    except Exception as e:
+        logging.error(f"HTTP fallback failed for {index_name}: {e}")
+        return []
+
+
 
 def main(use_proxy=False, target_index=None, ath_batch_size=50, ratio_batch_size=50):
     # Configure logging with datetime - save to file and console
