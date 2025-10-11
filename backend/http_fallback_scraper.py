@@ -15,12 +15,11 @@ def create_http_session():
     """Create HTTP session with realistic headers"""
     session = requests.Session()
     
-    # Realistic browser headers
+    # Realistic browser headers (remove Accept-Encoding to let requests handle compression)
     session.headers.update({
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
         'DNT': '1',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
@@ -73,24 +72,56 @@ def fetch_slickcharts_http(url, index_name):
         else:
             logging.warning("⚠ Content doesn't look like HTML, may still be compressed or encoded")
             
-            # Try alternative decoding methods
+            # Try alternative decompression methods
+            content_encoding = response.headers.get('Content-Encoding', '').lower()
+            logging.info(f"Content-Encoding: {content_encoding}")
+            
             try:
-                import gzip
-                # Try to decompress if it's gzipped
-                decompressed = gzip.decompress(response.content)
-                html_content = decompressed.decode('utf-8')
-                soup = BeautifulSoup(html_content, 'html.parser')
-                logging.info("✓ Successfully decompressed GZIP content")
+                if content_encoding == 'br':
+                    # Brotli compression
+                    import brotli
+                    decompressed = brotli.decompress(response.content)
+                    html_content = decompressed.decode('utf-8')
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    logging.info("✓ Successfully decompressed Brotli content")
+                elif content_encoding == 'gzip':
+                    # GZIP compression
+                    import gzip
+                    decompressed = gzip.decompress(response.content)
+                    html_content = decompressed.decode('utf-8')
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    logging.info("✓ Successfully decompressed GZIP content")
+                else:
+                    # Try auto-decompression
+                    import gzip, brotli
+                    
+                    # Try brotli first (common with Cloudflare)
+                    try:
+                        decompressed = brotli.decompress(response.content)
+                        html_content = decompressed.decode('utf-8')
+                        soup = BeautifulSoup(html_content, 'html.parser')
+                        logging.info("✓ Successfully decompressed with Brotli (auto-detected)")
+                    except:
+                        # Try gzip
+                        try:
+                            decompressed = gzip.decompress(response.content)
+                            html_content = decompressed.decode('utf-8')
+                            soup = BeautifulSoup(html_content, 'html.parser')
+                            logging.info("✓ Successfully decompressed with GZIP (auto-detected)")
+                        except:
+                            logging.warning("Failed to decompress with both Brotli and GZIP")
+                            raise
+                            
             except Exception as e:
-                logging.info(f"GZIP decompression failed: {e}")
+                logging.info(f"Decompression failed: {e}")
                 
-                # Try with different parser
+                # Try with html.parser as fallback (doesn't need lxml)
                 try:
-                    soup = BeautifulSoup(response.content, 'lxml')
+                    soup = BeautifulSoup(response.content, 'html.parser')
                     html_content = str(soup)
-                    logging.info("✓ Using lxml parser as fallback")
+                    logging.info("✓ Using html.parser as fallback")
                 except Exception as e2:
-                    logging.warning(f"lxml parser also failed: {e2}")
+                    logging.warning(f"html.parser also failed: {e2}")
         
         # Check if this looks like a blocking page
         blocking_indicators = ['cloudflare', 'access denied', 'forbidden', 'blocked', 'captcha']
