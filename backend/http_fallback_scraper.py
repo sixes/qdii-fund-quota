@@ -47,13 +47,50 @@ def fetch_slickcharts_http(url, index_name):
         response.raise_for_status()
         
         logging.info(f"HTTP response: {response.status_code}, Content-Length: {len(response.content)}")
+        logging.info(f"Response headers: {dict(response.headers)}")
+        
+        # Handle potential encoding issues
+        try:
+            # Try to get text content properly
+            if response.encoding is None:
+                response.encoding = 'utf-8'
+            html_content = response.text
+            logging.info("Successfully decoded response text")
+        except UnicodeDecodeError:
+            # Fallback to raw content with error handling
+            html_content = response.content.decode('utf-8', errors='replace')
+            logging.warning("Used fallback decoding with error replacement")
         
         # Parse with BeautifulSoup
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(html_content, 'html.parser')
         
         # Debug: Check what we actually got
-        html_content = response.text
         logging.info(f"HTML preview (first 500 chars): {html_content[:500]}")
+        
+        # Check if the content looks like HTML or if it's still garbled
+        if html_content.startswith('<!DOCTYPE html>') or '<html' in html_content[:100]:
+            logging.info("✓ Content appears to be valid HTML")
+        else:
+            logging.warning("⚠ Content doesn't look like HTML, may still be compressed or encoded")
+            
+            # Try alternative decoding methods
+            try:
+                import gzip
+                # Try to decompress if it's gzipped
+                decompressed = gzip.decompress(response.content)
+                html_content = decompressed.decode('utf-8')
+                soup = BeautifulSoup(html_content, 'html.parser')
+                logging.info("✓ Successfully decompressed GZIP content")
+            except Exception as e:
+                logging.info(f"GZIP decompression failed: {e}")
+                
+                # Try with different parser
+                try:
+                    soup = BeautifulSoup(response.content, 'lxml')
+                    html_content = str(soup)
+                    logging.info("✓ Using lxml parser as fallback")
+                except Exception as e2:
+                    logging.warning(f"lxml parser also failed: {e2}")
         
         # Check if this looks like a blocking page
         blocking_indicators = ['cloudflare', 'access denied', 'forbidden', 'blocked', 'captcha']
@@ -63,6 +100,8 @@ def fetch_slickcharts_http(url, index_name):
         if detected_blocks:
             logging.warning(f"HTTP request may be blocked: detected {detected_blocks}")
             logging.info("Trying to extract any available data anyway...")
+        else:
+            logging.info("✓ No obvious blocking detected in HTTP response")
         
         # Look for tables
         tables = soup.find_all('table')
