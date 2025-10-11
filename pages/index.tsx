@@ -37,13 +37,20 @@ export default function Home() {
   const [fundCompanies, setFundCompanies] = useState<string[]>([]);
   const [state, handleSubmit] = useForm("xyzdlpln");
   const [message, setMessage] = useState('');
-  const [activeTab, setActiveTab] = useState<'funds' | 'stocks'>('funds');
+  const [activeTab, setActiveTab] = useState<'index' | 'funds' | 'stocks'>('index');
   const [stockData, setStockData] = useState<any[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [stockMarket, setStockMarket] = useState<'US' | 'HK'>('US');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<'nasdaq100' | 'sp500' | 'dow'>('nasdaq100');
+  const [indexData, setIndexData] = useState<any[]>([]);
+  const [indexLoading, setIndexLoading] = useState(false);
+  const [indexSortKey, setIndexSortKey] = useState<string>('no');
+  const [indexSortDirection, setIndexSortDirection] = useState<'asc' | 'desc'>('asc');
+
+
 
   const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'));
 
@@ -98,6 +105,10 @@ export default function Home() {
       setStockSortKey(key);
       setStockSortDirection(newDirection);
       setStockData(sortData(stockData, key, newDirection));
+    } else if (activeTab === 'index') {
+      setIndexSortKey(key);
+      setIndexSortDirection(newDirection);
+      setIndexData(sortData(indexData, key, newDirection));
     } else {
       setFundSortKey(key);
       setFundSortDirection(newDirection);
@@ -131,6 +142,30 @@ export default function Home() {
       }
     }
     handleSubmit(e);
+  };
+
+  const fetchIndexData = async (index = activeIndex) => {
+    console.log('📊 fetchIndexData called with:', { activeTab, index, isInitialized });
+    if (activeTab !== 'index') {
+      console.log('❌ fetchIndexData skipped: not on index tab');
+      return;
+    }
+    console.log('🔄 Starting fetchIndexData request...');
+    setIndexLoading(true);
+    
+    const res = await fetch(`/api/index-constituents?index=${index}`);
+    const fetchedIndexData = await res.json();
+    console.log('📊 Fetched index data:', fetchedIndexData);
+    
+    let sortedIndexData: any[] = [];
+    if (Array.isArray(fetchedIndexData)) {
+      sortedIndexData = sortData(fetchedIndexData, indexSortKey, indexSortDirection);
+    } else {
+      sortedIndexData = [];
+    }
+    setIndexData(sortedIndexData);
+    setIndexLoading(false);
+    console.log('✅ fetchIndexData completed');
   };
 
   const fetchStockData = async () => {
@@ -202,7 +237,13 @@ export default function Home() {
       return;
     }
     
-    if (activeTab === 'funds') {
+    if (activeTab === 'index') {
+      console.log('📊 Switching to index tab');
+      setSortKey(indexSortKey);
+      setSortDirection(indexSortDirection);
+      fetchIndexData(activeIndex);
+      setHasLoadedInitialData(true);
+    } else if (activeTab === 'funds') {
       console.log('💰 Switching to funds tab');
       setSortKey(fundSortKey);
       setSortDirection(fundSortDirection);
@@ -278,6 +319,12 @@ export default function Home() {
           </div>
           <div className="mb-4 flex justify-center gap-2 sm:gap-4">
             <button
+              className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeTab === 'index' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+              onClick={() => setActiveTab('index')}
+            >
+              指数成分股
+            </button>
+            <button
               className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
               onClick={() => setActiveTab('funds')}
             >
@@ -290,6 +337,180 @@ export default function Home() {
               Mega 7+ 股票
             </button>
           </div>
+          {activeTab === 'index' && (
+            <>
+              {/* Index Navigation */}
+              <div className="mb-4 flex justify-center gap-2 sm:gap-4">
+                <button
+                  className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeIndex === 'nasdaq100' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  onClick={() => {
+                    setActiveIndex('nasdaq100');
+                    fetchIndexData('nasdaq100');
+                  }}
+                >
+                  Nasdaq 100
+                </button>
+                <button
+                  className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeIndex === 'sp500' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  onClick={() => {
+                    setActiveIndex('sp500');
+                    fetchIndexData('sp500');
+                  }}
+                >
+                  S&P 500
+                </button>
+                <button
+                  className={`px-3 py-2 sm:px-4 rounded-lg font-semibold transition text-sm sm:text-base ${activeIndex === 'dow' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  onClick={() => {
+                    setActiveIndex('dow');
+                    fetchIndexData('dow');
+                  }}
+                >
+                  Dow Jones 30
+                </button>
+              </div>
+              
+              {/* Index Constituents Table */}
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white/90 overflow-x-auto">
+                <Table size="small" sx={{ minWidth: { xs: 320, sm: 650 } }}>
+                  <TableHead>
+                    <TableRow className="bg-green-100 text-green-800" sx={{ height: { xs: 28, sm: 32 } }}>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 30, sm: 40 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'no'}
+                          direction={sortKey === 'no' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('no')}
+                        >No.</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'symbol'}
+                          direction={sortKey === 'symbol' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('symbol')}
+                        >Symbol</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 80, sm: 120 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'name'}
+                          direction={sortKey === 'name' ? sortDirection : 'asc'}
+                          onClick={() => handleSort('name')}
+                        >Company Name</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'weight'}
+                          direction={sortKey === 'weight' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('weight')}
+                        >Weight %</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'price'}
+                          direction={sortKey === 'price' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('price')}
+                        >Price</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'change'}
+                          direction={sortKey === 'change' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('change')}
+                        >Change %</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 50, sm: 70 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'marketCap'}
+                          direction={sortKey === 'marketCap' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('marketCap')}
+                        >Market Cap</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'ath_price'}
+                          direction={sortKey === 'ath_price' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('ath_price')}
+                        >ATH Price</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'pe_ratio'}
+                          direction={sortKey === 'pe_ratio' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('pe_ratio')}
+                        >P/E Ratio</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'eps_ttm'}
+                          direction={sortKey === 'eps_ttm' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('eps_ttm')}
+                        >EPS TTM</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'ps_ratio'}
+                          direction={sortKey === 'ps_ratio' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('ps_ratio')}
+                        >P/S Ratio</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'pb_ratio'}
+                          direction={sortKey === 'pb_ratio' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('pb_ratio')}
+                        >P/B Ratio</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'forward_pe'}
+                          direction={sortKey === 'forward_pe' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('forward_pe')}
+                        >Forward P/E</TableSortLabel>
+                      </TableCell>
+                      <TableCell sx={{ m: 0, p: 0, minWidth: { xs: 40, sm: 60 }, fontSize: { xs: '0.65rem', sm: '0.875rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>
+                        <TableSortLabel
+                          active={sortKey === 'ath_date'}
+                          direction={sortKey === 'ath_date' ? sortDirection : 'desc'}
+                          onClick={() => handleSort('ath_date')}
+                        >ATH Date</TableSortLabel>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {indexLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={13} align="center" className="py-8 text-green-400">加载中...</TableCell>
+                      </TableRow>
+                    ) : indexData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13} align="center" className="py-8 text-gray-400">暂无数据</TableCell>
+                      </TableRow>
+                    ) : (
+                      indexData.map((row, i) => (
+                        <TableRow key={i} className="hover:bg-green-50 transition" sx={{ height: { xs: 20, sm: 32 } }}>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.no}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.symbol}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.name}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.weight ? `${row.weight.toFixed(2)}%` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.price ? `$${row.price.toFixed(2)}` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 }, color: row.change > 0 ? 'green' : row.change < 0 ? 'red' : 'inherit' }}>
+                            {row.change ? `${row.change > 0 ? '+' : ''}${row.change.toFixed(2)}%` : '-'}
+                          </TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.marketCap || '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_price ? `$${row.ath_price.toFixed(2)}` : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pe_ratio ? row.pe_ratio.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.eps_ttm ? row.eps_ttm.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ps_ratio ? row.ps_ratio.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.pb_ratio ? row.pb_ratio.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.forward_pe ? row.forward_pe.toFixed(2) : '-'}</TableCell>
+                          <TableCell sx={{ fontSize: { xs: '0.6rem', sm: '0.925rem' }, py: 0, px: { xs: 0.5, sm: 1 } }}>{row.ath_date || '-'}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
           {activeTab === 'funds' && (
             <>
               <div className="bg-white/80 backdrop-blur rounded-xl shadow-lg p-4 sm:p-6 mb-8 flex flex-col gap-4 items-stretch">
