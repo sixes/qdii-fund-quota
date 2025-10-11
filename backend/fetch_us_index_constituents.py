@@ -255,7 +255,7 @@ def fetch_slickcharts_data(url, index_name, max_retries=3):
                                     "weight": weight,
                                     "marketCap": 0,  # Will be filled from StockAnalysis
                                     "price": price,
-                                    "change": 0,
+                                    "change": 0,  # Will be calculated from yfinance data
                                     "netChange": 0
                                 })
                                 
@@ -482,16 +482,17 @@ def get_proxy_config():
     return f"{proxy_type}://{proxy_host}:{proxy_port}"
 
 def fetch_batch_stock_data(symbols, use_proxy=False):
-    """Fetch ATH prices and ratios using yfinance batch API with 50-symbol batches."""
+    """Fetch ATH prices, current prices, daily changes, and ratios using yfinance batch API with 50-symbol batches."""
     try:
         ath_data = {}
         ratios_data = {}
+        price_data = {}
         
         # Process symbols in batches for both ATH and ratios
         batch_size = 50  # Same batch size for both ATH and ratios
         total_batches = (len(symbols) + batch_size - 1) // batch_size
         
-        logging.info(f"Fetching ATH and ratios data for {len(symbols)} symbols in {total_batches} batches of {batch_size}...")
+        logging.info(f"Fetching ATH, current prices, daily changes, and ratios data for {len(symbols)} symbols in {total_batches} batches of {batch_size}...")
         
         # First, fetch ATH data in batches
         for batch_num in range(total_batches):
@@ -508,30 +509,41 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
                     os.environ['HTTP_PROXY'] = proxy_url
                     os.environ['HTTPS_PROXY'] = proxy_url
                 
-                # Use yfinance batch download for historical data
+                # Use yfinance batch download for historical data (max period for ATH)
                 symbols_str = ' '.join(batch_symbols)
                 hist_data = yf.download(symbols_str, period="max", group_by='ticker', auto_adjust=True, prepost=True, threads=False, timeout=30)
                 
+                # Also get recent 5 days for current price and daily change calculation
+                recent_data = yf.download(symbols_str, period="5d", group_by='ticker', auto_adjust=True, prepost=True, threads=False, timeout=30)
+                
                 batch_ath_success = 0
+                batch_price_success = 0
                 for symbol in batch_symbols:
                     try:
                         # Extract ATH data with better handling
                         symbol_hist = None
+                        symbol_recent = None
+                        
                         try:
                             if len(batch_symbols) == 1:
                                 # Single symbol case
                                 symbol_hist = hist_data
+                                symbol_recent = recent_data
                             else:
                                 # Multiple symbols case - check if symbol exists in data
                                 if hasattr(hist_data, 'columns') and hasattr(hist_data.columns, 'get_level_values'):
                                     if symbol in hist_data.columns.get_level_values(0):
                                         symbol_hist = hist_data[symbol]
+                                        symbol_recent = recent_data[symbol]
                                 elif symbol in hist_data.columns:
                                     symbol_hist = hist_data[symbol]
+                                    symbol_recent = recent_data[symbol]
                         except Exception as e:
                             logging.debug(f"Error extracting hist data for {symbol}: {e}")
                             symbol_hist = None
+                            symbol_recent = None
                         
+                        # Process ATH data
                         if symbol_hist is not None and not symbol_hist.empty and 'High' in symbol_hist.columns:
                             ath_price = symbol_hist['High'].max()
                             ath_date = symbol_hist[symbol_hist['High'] == ath_price].index[0].strftime('%Y-%m-%d')
@@ -543,11 +555,35 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
                             }
                             batch_ath_success += 1
                         
+                        # Process current price and daily change
+                        if symbol_recent is not None and not symbol_recent.empty and 'Close' in symbol_recent.columns:
+                            if len(symbol_recent) >= 2:
+                                # Get the last two closing prices
+                                current_price = symbol_recent['Close'].iloc[-1]
+                                previous_price = symbol_recent['Close'].iloc[-2]
+                                
+                                # Calculate daily percentage change
+                                if previous_price != 0:
+                                    daily_change = ((current_price - previous_price) / previous_price) * 100
+                                else:
+                                    daily_change = 0
+                                
+                                price_data[symbol] = {
+                                    "current_price": float(current_price),
+                                    "previous_price": float(previous_price),
+                                    "daily_change_percent": float(daily_change)
+                                }
+                                batch_price_success += 1
+                                
+                                # Log first few for verification
+                                if batch_price_success <= 3:
+                                    logging.info(f"Price data for {symbol}: ${current_price:.2f} ({daily_change:+.2f}%)")
+                        
                         # Minimal delay between symbols
                         time.sleep(0.1)
                         
                     except Exception as e:
-                        logging.debug(f"Failed to process ATH for {symbol}: {e}")
+                        logging.debug(f"Failed to process data for {symbol}: {e}")
                         continue
                 
                 logging.info(f"ATH batch {batch_num + 1} completed: {batch_ath_success}/{len(batch_symbols)} symbols processed")
@@ -674,7 +710,7 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
         total_ratios_fetched = len(ratios_data)
         logging.info(f"Completed batch ratios fetching: {total_ratios_fetched}/{len(symbols)} symbols processed")
         
-        return ath_data, ratios_data
+        return ath_data, ratios_data, price_data
         
     except Exception as e:
         logging.error(f"Batch data fetch failed: {e}")
@@ -685,7 +721,7 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
                 del os.environ['HTTP_PROXY']
             if 'HTTPS_PROXY' in os.environ:
                 del os.environ['HTTPS_PROXY']
-        return {}, {}
+        return {}, {}, {}
 
 def add_ath_data_to_constituents(constituents_data, ath_data):
     """Add ATH price data to constituents list."""
@@ -721,6 +757,24 @@ def add_financial_ratios_to_constituents(constituents_data, ratios_data):
             updated_count += 1
     
     logging.info(f"Added financial ratios to {updated_count}/{len(constituents_data)} constituents")
+    return constituents_data
+
+def add_price_data_to_constituents(constituents_data, price_data):
+    """Add current price and daily change data to constituents list."""
+    if not constituents_data or not price_data:
+        return constituents_data
+    
+    updated_count = 0
+    for constituent in constituents_data:
+        symbol = constituent.get('symbol')
+        if symbol and symbol in price_data:
+            price_info = price_data[symbol]
+            # Update current price and daily change percentage
+            constituent['price'] = price_info.get('current_price', constituent.get('price', 0))
+            constituent['change'] = price_info.get('daily_change_percent', 0)
+            updated_count += 1
+    
+    logging.info(f"Added price and change data to {updated_count}/{len(constituents_data)} constituents")
     return constituents_data
 
 def compare_constituents(slickcharts_data, stockanalysis_data, index_name):
@@ -791,15 +845,15 @@ def merge_market_cap_data(slickcharts_data, stockanalysis_data):
     return slickcharts_data
 
 def fetch_all_market_data(all_symbols, ath_batch_size, ratio_batch_size, use_proxy):
-    """Fetch ATH and ratios data for all symbols"""
+    """Fetch ATH, ratios, and price data for all symbols"""
     if not all_symbols:
-        return {}, {}, 0, 0, 0, 0
+        return {}, {}, {}, 0, 0, 0, 0
     
     all_symbols_list = list(all_symbols)
     logging.info(f"Fetching data for {len(all_symbols_list)} unique symbols...")
     
     # Use existing batch stock data function
-    ath_data, ratios_data = fetch_batch_stock_data(all_symbols_list, use_proxy)
+    ath_data, ratios_data, price_data = fetch_batch_stock_data(all_symbols_list, use_proxy)
     
     # Count success/failure
     total_ath_success = len(ath_data)
@@ -807,7 +861,7 @@ def fetch_all_market_data(all_symbols, ath_batch_size, ratio_batch_size, use_pro
     total_ratios_success = len(ratios_data)
     total_ratios_failed = len(all_symbols_list) - total_ratios_success
     
-    return ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed
+    return ath_data, ratios_data, price_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed
 
 def create_http_session_fallback():
     """Create HTTP session for fallback scraping when Chrome fails"""
@@ -1006,10 +1060,10 @@ def update_ath_and_ratios_data(existing_data, use_proxy, ath_batch_size, ratio_b
     logging.info(f"Updating ATH and ratios for {len(all_symbols)} unique symbols...")
     
     # Fetch updated market data
-    ath_data, ratios_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed = fetch_all_market_data(
+    ath_data, ratios_data, price_data, total_ath_success, total_ath_failed, total_ratios_success, total_ratios_failed = fetch_all_market_data(
         all_symbols, ath_batch_size, ratio_batch_size, use_proxy)
     
-    # Update existing data with new ATH and ratios
+    # Update existing data with new ATH, ratios, and price data
     for index_key, constituents in existing_data.items():
         for constituent in constituents:
             symbol = constituent.get('symbol')
@@ -1027,6 +1081,12 @@ def update_ath_and_ratios_data(existing_data, use_proxy, ath_batch_size, ratio_b
                     constituent['ps_ratio'] = ratios.get('ps_ratio')
                     constituent['pb_ratio'] = ratios.get('pb_ratio')
                     constituent['forward_pe'] = ratios.get('forward_pe')
+                
+                # Update price and daily change data
+                if symbol in price_data:
+                    price_info = price_data[symbol]
+                    constituent['price'] = price_info.get('current_price', constituent.get('price', 0))
+                    constituent['change'] = price_info.get('daily_change_percent', 0)
     
     logging.info(f"ATH update: {total_ath_success} success, {total_ath_failed} failed")
     logging.info(f"Ratios update: {total_ratios_success} success, {total_ratios_failed} failed")
@@ -1077,7 +1137,7 @@ def scrape_and_compare_constituents(existing_data, target_index):
         
         for symbol, new_data in new_symbols.items():
             if symbol in existing_symbols:
-                # Update existing constituent
+                # Update existing constituent - preserve existing price/change from step 2
                 existing_constituent = existing_symbols[symbol].copy()
                 
                 # Check if weight changed significantly (>0.01%)
@@ -1085,15 +1145,17 @@ def scrape_and_compare_constituents(existing_data, target_index):
                 new_weight = new_data.get('weight', 0)
                 weight_changed = abs(old_weight - new_weight) > 0.01
                 
-                # Update core data from scraping
+                # Update core data from scraping but preserve price/change from existing data (Step 2)
                 existing_constituent.update({
                     'no': new_data.get('no', existing_constituent.get('no', 0)),
                     'name': new_data.get('name', existing_constituent.get('name', '')),
                     'weight': new_weight,
-                    'price': new_data.get('price', existing_constituent.get('price', 0)),
-                    'change': new_data.get('change', existing_constituent.get('change', 0)),
                     'marketCap': new_data.get('marketCap', existing_constituent.get('marketCap', '')),
                 })
+                
+                # Preserve price and change data from Step 2 (already updated with yfinance data)
+                # Do NOT overwrite with scraped data which is typically 0 or stale
+                logging.debug(f"Preserving Step 2 data for {symbol}: price=${existing_constituent.get('price', 0):.2f}, change={existing_constituent.get('change', 0):.2f}%")
                 
                 if weight_changed:
                     updated_count += 1
@@ -1101,7 +1163,7 @@ def scrape_and_compare_constituents(existing_data, target_index):
                 
                 updated_constituents.append(existing_constituent)
             else:
-                # Add new constituent (preserve any existing ATH/ratios data if symbol was previously tracked)
+                # Add new constituent - need to fetch fresh data for new symbols
                 updated_constituents.append(new_data)
         
         updated_data[index_key] = updated_constituents
