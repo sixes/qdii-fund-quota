@@ -51,12 +51,105 @@ def fetch_slickcharts_http(url, index_name):
         # Parse with BeautifulSoup
         soup = BeautifulSoup(response.content, 'html.parser')
         
+        # Debug: Check what we actually got
+        html_content = response.text
+        logging.info(f"HTML preview (first 500 chars): {html_content[:500]}")
+        
+        # Check if this looks like a blocking page
+        blocking_indicators = ['cloudflare', 'access denied', 'forbidden', 'blocked', 'captcha']
+        content_lower = html_content.lower()
+        detected_blocks = [indicator for indicator in blocking_indicators if indicator in content_lower]
+        
+        if detected_blocks:
+            logging.warning(f"HTTP request may be blocked: detected {detected_blocks}")
+            logging.info("Trying to extract any available data anyway...")
+        
         # Look for tables
         tables = soup.find_all('table')
         logging.info(f"Found {len(tables)} tables in HTML")
         
+        # Also check for JavaScript data patterns that might contain the stock data
+        js_patterns = [
+            r'window\.__sc_init_state__\s*=\s*({.*?});',
+            r'__sc_init_state__\s*=\s*({.*?});',
+            r'"companyList"\s*:\s*(\[.*?\])',
+            r'var\s+companies\s*=\s*(\[.*?\]);',
+            r'const\s+data\s*=\s*({.*?});'
+        ]
+        
+        js_data = None
+        for pattern in js_patterns:
+            match = re.search(pattern, html_content, re.DOTALL)
+            if match:
+                js_data = match.group(1)
+                logging.info(f"Found JavaScript data pattern: {pattern}")
+                break
+        
+        if js_data:
+            logging.info("Attempting to parse JavaScript data...")
+            try:
+                data = json.loads(js_data)
+                logging.info(f"JavaScript data type: {type(data)}")
+                
+                # Try to extract company list from various possible structures
+                company_list = None
+                if isinstance(data, list):
+                    company_list = data
+                elif isinstance(data, dict):
+                    # Check various possible keys
+                    possible_keys = ['companyList', 'companies', 'data', 'stocks', 'constituents']
+                    for key in possible_keys:
+                        if key in data:
+                            company_list = data[key]
+                            break
+                    
+                    # Check nested structures
+                    if not company_list and 'companyListComponent' in data:
+                        comp_data = data['companyListComponent']
+                        if isinstance(comp_data, dict) and 'companyList' in comp_data:
+                            company_list = comp_data['companyList']
+                
+                if company_list and isinstance(company_list, list):
+                    logging.info(f"Found company list with {len(company_list)} entries")
+                    
+                    # Convert JavaScript data to our format
+                    constituents = []
+                    for idx, company in enumerate(company_list, 1):
+                        try:
+                            if isinstance(company, dict):
+                                symbol = company.get('symbol', '')
+                                name = company.get('name', '') or company.get('companyName', '')
+                                weight = company.get('weight', 0)
+                                
+                                if isinstance(weight, str):
+                                    weight = float(re.sub(r'[^\d.]', '', weight.replace('%', '')))
+                                
+                                if symbol and name:
+                                    constituents.append({
+                                        "no": company.get('rank', idx),
+                                        "symbol": symbol,
+                                        "name": name,
+                                        "weight": weight,
+                                        "marketCap": company.get('marketCap', 0),
+                                        "price": company.get('lastPrice', 0) or company.get('price', 0),
+                                        "change": company.get('changePercent', 0) or company.get('change', 0)
+                                    })
+                                    
+                                    if idx <= 3:
+                                        logging.info(f"JS Row {idx}: {symbol} - {name} ({weight}%)")
+                        except Exception as e:
+                            logging.debug(f"Error parsing JS company {idx}: {e}")
+                    
+                    if constituents:
+                        logging.info(f"JavaScript parsing extracted {len(constituents)} companies")
+                        return constituents
+                
+            except json.JSONDecodeError as e:
+                logging.warning(f"Failed to parse JavaScript data as JSON: {e}")
+        
         if not tables:
             logging.warning(f"No tables found for {index_name}")
+            logging.info("The site likely uses JavaScript to dynamically load content")
             return []
         
         # Parse the main data table (usually the largest one)
