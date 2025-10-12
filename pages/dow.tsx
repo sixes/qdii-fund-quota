@@ -14,6 +14,7 @@ import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 import Navigation from '../components/Navigation';
 import IndexReturnsChart from '../components/IndexReturnsChart';
+import { useTranslation } from '../lib/translations';
 
 function DowPage() {
   const router = useRouter();
@@ -25,6 +26,24 @@ function DowPage() {
   const [page, setPage] = useState(1);
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const ITEMS_PER_PAGE = 20;
+  const t = useTranslation(language);
+
+  // Initialize language from URL query parameter
+  useEffect(() => {
+    const langFromUrl = router.query.lang as string;
+    if (langFromUrl === 'zh') {
+      setLanguage('zh');
+    } else {
+      setLanguage('en');
+    }
+  }, [router.query.lang]);
+
+  // Handle language change and update URL
+  const handleLanguageChange = (lang: 'en' | 'zh') => {
+    setLanguage(lang);
+    const query = { ...router.query, lang };
+    router.push({ pathname: router.pathname, query }, undefined, { shallow: true });
+  };
 
   const sortData = (arr: any[], key: string, direction: 'asc' | 'desc') => {
     if (!key) return arr;
@@ -64,8 +83,8 @@ function DowPage() {
   return (
     <>
       <Head>
-        <title>Dow Jones Industrial Average - 30 Constituents & Historical Returns | DJIA Analysis</title>
-        <meta name="description" content="View Dow Jones Industrial Average (DJIA) 30 constituents with real-time data, prices, ATH analysis, and historical returns. Track America's most established blue chip companies including Boeing, Goldman Sachs, Coca-Cola, and Disney with financial metrics." />
+        <title>{t.dow.title}</title>
+        <meta name="description" content={t.dow.description} />
         <meta name="keywords" content="Dow Jones, DJIA, Dow 30, Dow Jones Industrial Average, blue chip stocks, DJI, index constituents, stock prices, historical returns, P/E ratio, market cap, ATH analysis, industrial stocks, US stock market, investment analysis, dividend stocks" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
@@ -86,43 +105,43 @@ function DowPage() {
       </Script>
 
             <div className="min-h-screen bg-gray-100">
-        <Navigation language={language} onLanguageChange={setLanguage} />
+        <Navigation language={language} onLanguageChange={handleLanguageChange} />
 
         <main className="py-6">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
             <div className="mb-6 text-center">
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Dow Jones 30 Index Constituents</h1>
-              <p className="text-gray-600 text-lg">View all Dow Jones 30 stocks with weights, last closing prices, ATH data, and key financial ratios</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{t.dow.heading}</h1>
+              <p className="text-gray-600 text-lg">{t.dow.subheading}</p>
             </div>
             {view === 'returns' ? (
-              <IndexReturnsChart indexKey="dow" indexName="Dow Jones 30" />
+              <IndexReturnsChart indexKey="dow" indexName="Dow Jones" language={language} />
             ) : (
               <TableContainer component={Paper} className="rounded-xl shadow bg-white overflow-x-auto">
                 <Table stickyHeader size="small" sx={{ minWidth: { xs: 320, sm: 900 } }}>
                   <TableHead>
                     <TableRow className="bg-gray-100 text-gray-700">
-                      <TableCell><TableSortLabel active={sortKey==='no'} direction={sortKey==='no'?sortDirection:'asc'} onClick={()=>handleSort('no')}>No.</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='symbol'} direction={sortKey==='symbol'?sortDirection:'asc'} onClick={()=>handleSort('symbol')}>Symbol</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='name'} direction={sortKey==='name'?sortDirection:'asc'} onClick={()=>handleSort('name')}>Company Name</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='ath_price'} direction={sortKey==='ath_price'?sortDirection:'desc'} onClick={()=>handleSort('ath_price')}>ATH Price</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='ath_date'} direction={sortKey==='ath_date'?sortDirection:'desc'} onClick={()=>handleSort('ath_date')}>ATH Date</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='ath_change_percent'} direction={sortKey==='ath_change_percent'?sortDirection:'asc'} onClick={()=>handleSort('ath_change_percent')}>ATH Change %</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='price'} direction={sortKey==='price'?sortDirection:'desc'} onClick={()=>handleSort('price')}>Price</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='change'} direction={sortKey==='change'?sortDirection:'desc'} onClick={()=>handleSort('change')}>Change %</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='weight'} direction={sortKey==='weight'?sortDirection:'desc'} onClick={()=>handleSort('weight')}>Weight %</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='marketCap'} direction={sortKey==='marketCap'?sortDirection:'desc'} onClick={()=>handleSort('marketCap')}>Market Cap</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='pe_ratio'} direction={sortKey==='pe_ratio'?sortDirection:'desc'} onClick={()=>handleSort('pe_ratio')}>P/E Ratio</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='forward_pe'} direction={sortKey==='forward_pe'?sortDirection:'desc'} onClick={()=>handleSort('forward_pe')}>Forward P/E</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='ps_ratio'} direction={sortKey==='ps_ratio'?sortDirection:'desc'} onClick={()=>handleSort('ps_ratio')}>P/S Ratio</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='pb_ratio'} direction={sortKey==='pb_ratio'?sortDirection:'desc'} onClick={()=>handleSort('pb_ratio')}>P/B Ratio</TableSortLabel></TableCell>
-                      <TableCell><TableSortLabel active={sortKey==='eps_ttm'} direction={sortKey==='eps_ttm'?sortDirection:'desc'} onClick={()=>handleSort('eps_ttm')}>EPS TTM</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='no'} direction={sortKey==='no'?sortDirection:'asc'} onClick={()=>handleSort('no')}>{t.index.no}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='symbol'} direction={sortKey==='symbol'?sortDirection:'asc'} onClick={()=>handleSort('symbol')}>{t.index.symbol}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='name'} direction={sortKey==='name'?sortDirection:'asc'} onClick={()=>handleSort('name')}>{t.index.companyName}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='ath_price'} direction={sortKey==='ath_price'?sortDirection:'desc'} onClick={()=>handleSort('ath_price')}>{t.index.athPrice}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='ath_date'} direction={sortKey==='ath_date'?sortDirection:'desc'} onClick={()=>handleSort('ath_date')}>{t.index.athDate}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='ath_change_percent'} direction={sortKey==='ath_change_percent'?sortDirection:'asc'} onClick={()=>handleSort('ath_change_percent')}>{t.index.athChange}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='price'} direction={sortKey==='price'?sortDirection:'desc'} onClick={()=>handleSort('price')}>{t.index.price}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='change'} direction={sortKey==='change'?sortDirection:'desc'} onClick={()=>handleSort('change')}>{t.index.change}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='weight'} direction={sortKey==='weight'?sortDirection:'desc'} onClick={()=>handleSort('weight')}>{t.index.weight}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='marketCap'} direction={sortKey==='marketCap'?sortDirection:'desc'} onClick={()=>handleSort('marketCap')}>{t.index.marketCap}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='pe_ratio'} direction={sortKey==='pe_ratio'?sortDirection:'desc'} onClick={()=>handleSort('pe_ratio')}>{t.index.peRatio}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='forward_pe'} direction={sortKey==='forward_pe'?sortDirection:'desc'} onClick={()=>handleSort('forward_pe')}>{t.index.forwardPe}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='ps_ratio'} direction={sortKey==='ps_ratio'?sortDirection:'desc'} onClick={()=>handleSort('ps_ratio')}>{t.index.psRatio}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='pb_ratio'} direction={sortKey==='pb_ratio'?sortDirection:'desc'} onClick={()=>handleSort('pb_ratio')}>{t.index.pbRatio}</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='eps_ttm'} direction={sortKey==='eps_ttm'?sortDirection:'desc'} onClick={()=>handleSort('eps_ttm')}>{t.index.epsTtm}</TableSortLabel></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
-                      <TableRow><TableCell colSpan={15} align="center" className="py-8 text-gray-500">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={15} align="center" className="py-8 text-gray-500">{t.index.loading}</TableCell></TableRow>
                     ) : data.length === 0 ? (
-                      <TableRow><TableCell colSpan={15} align="center" className="py-8 text-gray-500">No data available</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={15} align="center" className="py-8 text-gray-500">{t.index.noData}</TableCell></TableRow>
                     ) : (
                       paged.map((row, i) => (
                         <TableRow key={i} className="hover:bg-gray-50 transition">
@@ -155,7 +174,7 @@ function DowPage() {
                       <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} color="primary" shape="rounded" siblingCount={0} boundaryCount={1} size="small" />
                     )}
                     <div className="flex-1 flex justify-end">
-                      <span className="text-gray-500 text-xs sm:text-sm">Showing {(page-1)*ITEMS_PER_PAGE+1} to {Math.min(page*ITEMS_PER_PAGE, data.length)} of {data.length.toLocaleString()}</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">{t.index.showing} {(page-1)*ITEMS_PER_PAGE+1} {t.index.to} {Math.min(page*ITEMS_PER_PAGE, data.length)} {t.index.of} {data.length.toLocaleString()}</span>
                     </div>
                   </div>
                 )}

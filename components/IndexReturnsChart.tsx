@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from '../lib/translations';
 
 interface YearlyReturn {
   return: number;
@@ -32,11 +33,10 @@ interface ChartData {
 interface IndexReturnsChartProps {
   indexKey: string;
   indexName: string;
+  language: 'en' | 'zh';
 }
 
-type Period = '1y' | '3y' | '5y' | '10y' | 'max';
-
-const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexName }) => {
+const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexName, language }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [tvLoaded, setTvLoaded] = useState(false);
   const retryTimerRef = useRef<number | null>(null);
@@ -45,11 +45,11 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [chartData, setChartData] = useState<ChartData | null>(null);
-  const selectedPeriod: Period = 'max';
+  const t = useTranslation(language);
 
   const log = (...args: any[]) => {
     // eslint-disable-next-line no-console
-    console.log(`[TV][${indexKey}][${selectedPeriod}]`, ...args);
+    console.log(`[TV][${indexKey}]`, ...args);
   };
 
   // Correct TradingView symbols (verified)
@@ -64,14 +64,6 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
       default:
         return 'NASDAQ:NDX';
     }
-  };
-
-  const timeframeMap: Record<Period, string> = {
-    '1y': '12M',
-    '3y': '36M',
-    '5y': '60M',
-    '10y': '120M',
-    'max': 'all',
   };
 
   const getContainerSize = () => {
@@ -155,7 +147,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
       chartContainerRef.current.id = containerId;
 
       const symbol = getTvSymbol(indexKey);
-      const timeframe = timeframeMap[selectedPeriod];
+      const timeframe = 'all';
       log('Creating widget', { symbol, timeframe });
 
       try {
@@ -229,7 +221,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [tvLoaded, indexKey, selectedPeriod]);
+  }, [tvLoaded, indexKey]);
 
   // Fetch data from API
   useEffect(() => {
@@ -238,7 +230,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
       setError(null);
 
       try {
-        const response = await fetch(`/api/index-history?index=${indexKey}&period=${selectedPeriod}`);
+        const response = await fetch(`/api/index-history?index=${indexKey}&period=max`);
         
         if (!response.ok) {
           throw new Error('Failed to load data');
@@ -254,7 +246,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
     };
 
     fetchData();
-  }, [indexKey, selectedPeriod]);
+  }, [indexKey]);
 
   // Remove lightweight-charts cleanup
   useEffect(() => {
@@ -269,7 +261,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
     <div className="w-full">
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">{indexName} Historical Returns</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{indexName} {t.returns.title}</h2>
           {chartData && (
             <p className="text-sm text-gray-500 mt-1">
               Last updated: {new Date(chartData.last_updated).toLocaleDateString()}
@@ -284,7 +276,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
               <div className="h-[500px] flex items-center justify-center bg-gray-50 rounded-lg">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading chart data...</p>
+                  <p className="text-gray-600">{t.returns.loading}</p>
                 </div>
               </div>
             )}
@@ -292,7 +284,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
             {error && (
               <div className="h-[500px] flex items-center justify-center bg-red-50 rounded-lg">
                 <div className="text-center text-red-600">
-                  <p className="text-lg font-semibold mb-2">Error Loading Data</p>
+                  <p className="text-lg font-semibold mb-2">{t.returns.error}</p>
                   <p>{error}</p>
                 </div>
               </div>
@@ -306,7 +298,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
           {/* Yearly returns sidebar */}
           {chartData && chartData.yearly_returns && (
             <div className="lg:w-64 bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Yearly Returns</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t.returns.yearlyReturns}</h3>
               <div className="space-y-2 max-h-[468px] overflow-y-auto">
                 {Object.entries(chartData.yearly_returns)
                   .sort(([yearA], [yearB]) => parseInt(yearB) - parseInt(yearA))
@@ -335,23 +327,23 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
         {chartData && chartData.yearly_returns && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-blue-600 font-medium">Total Data Points</p>
+              <p className="text-sm text-blue-600 font-medium">{t.returns.totalDataPoints}</p>
               <p className="text-2xl font-bold text-blue-900">{chartData.total_months}</p>
-              <p className="text-xs text-blue-600 mt-1">Monthly candles</p>
+              <p className="text-xs text-blue-600 mt-1">{t.returns.monthlyCandles}</p>
             </div>
 
             <div className="bg-green-50 rounded-lg p-4">
-              <p className="text-sm text-green-600 font-medium">Positive Years</p>
+              <p className="text-sm text-green-600 font-medium">{t.returns.positiveYears}</p>
               <p className="text-2xl font-bold text-green-900">
                 {Object.values(chartData.yearly_returns).filter((y) => y.return >= 0).length}
               </p>
               <p className="text-xs text-green-600 mt-1">
-                Out of {Object.keys(chartData.yearly_returns).length} years
+                {t.returns.outOf} {Object.keys(chartData.yearly_returns).length} {t.returns.years}
               </p>
             </div>
 
             <div className="bg-purple-50 rounded-lg p-4">
-              <p className="text-sm text-purple-600 font-medium">Average Return</p>
+              <p className="text-sm text-purple-600 font-medium">{t.returns.averageReturn}</p>
               <p className="text-2xl font-bold text-purple-900">
                 {(
                   Object.values(chartData.yearly_returns).reduce((sum, y) => sum + y.return, 0) /
@@ -359,7 +351,7 @@ const IndexReturnsChart: React.FC<IndexReturnsChartProps> = ({ indexKey, indexNa
                 ).toFixed(2)}
                 %
               </p>
-              <p className="text-xs text-purple-600 mt-1">Per year</p>
+              <p className="text-xs text-purple-600 mt-1">{t.returns.perYear}</p>
             </div>
           </div>
         )}

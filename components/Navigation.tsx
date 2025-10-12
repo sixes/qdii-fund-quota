@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTranslation } from '../lib/translations';
 
 interface NavigationProps {
   language: 'en' | 'zh';
@@ -12,27 +13,16 @@ interface NavigationProps {
 export default function Navigation({ language, onLanguageChange, activeTab, onTabChange }: NavigationProps) {
   const [openMenu, setOpenMenu] = useState<null | 'nasdaq100' | 'sp500' | 'dow'>(null);
   const router = useRouter();
+  const t = useTranslation(language);
 
   const handleLanguageChange = (lang: 'en' | 'zh') => {
     onLanguageChange(lang);
-    // If switching to Chinese and not on home page, redirect to home with language parameter
-    if (lang === 'zh' && router.pathname !== '/') {
-      router.push('/?lang=zh');
-    }
-  };
-
-  const t = {
-    en: {
-      title: "US Index Constituents",
-      qdii: "QDII Funds",
-      mega7: "Mega 7+ Stocks"
-    },
-    zh: {
-      title: "QDII基金申购额度查询",
-      indexConstituents: "指数成分股",
-      qdii: "基金额度",
-      mega7: "Mega 7+ 股票"
-    }
+    // Update URL with language parameter on all pages
+    const currentPath = router.pathname;
+    const currentQuery = { ...router.query, lang };
+    
+    // Just update the query parameter without redirecting
+    router.push({ pathname: currentPath, query: currentQuery }, undefined, { shallow: true });
   };
 
   return (
@@ -43,7 +33,7 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
             <div className="flex-shrink-0">
               <Link href="/">
                 <h1 className="text-2xl font-bold text-gray-900 cursor-pointer">
-                  {language === 'en' ? t.en.title : t.zh.title}
+                  {t.nav.title}
                 </h1>
               </Link>
             </div>
@@ -60,11 +50,11 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                 </button>
                 {openMenu === 'nasdaq100' && (
                   <div className="absolute mt-1 w-44 bg-white border rounded-md shadow-lg z-20">
-                    <Link href="/nasdaq100" className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
-                      {language === 'en' ? 'Index Constituents' : t.zh.indexConstituents}
+                    <Link href={`/nasdaq100${language === 'zh' ? '?lang=zh' : ''}`} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
+                      {t.nav.indexConstituents}
                     </Link>
-                    <Link href={{ pathname: '/nasdaq100', query: { view: 'returns' } }} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
-                      {language === 'en' ? 'Historical Returns' : '历史回报'}
+                    <Link href={{ pathname: '/nasdaq100', query: { view: 'returns', ...(language === 'zh' && { lang: 'zh' }) } }} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
+                      {t.nav.historicalReturns}
                     </Link>
                   </div>
                 )}
@@ -80,11 +70,11 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                 </button>
                 {openMenu === 'sp500' && (
                   <div className="absolute mt-1 w-44 bg-white border rounded-md shadow-lg z-20">
-                    <Link href="/sp500" className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
-                      {language === 'en' ? 'Index Constituents' : t.zh.indexConstituents}
+                    <Link href={`/sp500${language === 'zh' ? '?lang=zh' : ''}`} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
+                      {t.nav.indexConstituents}
                     </Link>
-                    <Link href={{ pathname: '/sp500', query: { view: 'returns' } }} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
-                      {language === 'en' ? 'Historical Returns' : '历史回报'}
+                    <Link href={{ pathname: '/sp500', query: { view: 'returns', ...(language === 'zh' && { lang: 'zh' }) } }} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
+                      {t.nav.historicalReturns}
                     </Link>
                   </div>
                 )}
@@ -100,41 +90,60 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                 </button>
                 {openMenu === 'dow' && (
                   <div className="absolute mt-1 w-44 bg-white border rounded-md shadow-lg z-20">
-                    <Link href="/dow" className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
-                      {language === 'en' ? 'Index Constituents' : t.zh.indexConstituents}
+                    <Link href={`/dow${language === 'zh' ? '?lang=zh' : ''}`} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
+                      {t.nav.indexConstituents}
                     </Link>
-                    <Link href={{ pathname: '/dow', query: { view: 'returns' } }} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
-                      {language === 'en' ? 'Historical Returns' : '历史回报'}
+                    <Link href={{ pathname: '/dow', query: { view: 'returns', ...(language === 'zh' && { lang: 'zh' }) } }} className="block px-3 py-2 text-sm hover:bg-gray-100" onClick={() => setOpenMenu(null)}>
+                      {t.nav.historicalReturns}
                     </Link>
                   </div>
                 )}
               </div>
 
               {/* QDII and Mega 7+ only for Chinese */}
-              {language === 'zh' && onTabChange && (
+              {language === 'zh' && (
                 <>
-                  <button
-                    className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                    onClick={() => onTabChange('funds')}
-                  >
-                    {t.zh.qdii}
-                  </button>
-                  <button
-                    className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
-                    onClick={() => onTabChange('stocks')}
-                  >
-                    {t.zh.mega7}
-                  </button>
+                  {onTabChange ? (
+                    <>
+                      <button
+                        className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'funds' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
+                        onClick={() => onTabChange('funds')}
+                      >
+                        {t.nav.qdii}
+                      </button>
+                      <button
+                        className={`px-3 py-1 rounded-md text-sm font-medium ${activeTab === 'stocks' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
+                        onClick={() => onTabChange('stocks')}
+                      >
+                        {t.nav.mega7}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/?lang=zh#funds"
+                        className="px-3 py-1 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200"
+                      >
+                        {t.nav.qdii}
+                      </Link>
+                      <Link
+                        href="/?lang=zh#stocks"
+                        className="px-3 py-1 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200"
+                      >
+                        {t.nav.mega7}
+                      </Link>
+                    </>
+                  )}
                 </>
               )}
             </div>
 
             {/* Contact Us Button */}
             <Link
-              href="/contact"
+              href={language === 'zh' ? '/contact?lang=zh' : '/contact'}
               className="hidden sm:block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
             >
-              {language === 'en' ? 'Contact Us' : '联系我们'}
+              {t.nav.contact}
             </Link>
 
             {/* Language Toggle */}
