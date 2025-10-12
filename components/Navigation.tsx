@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -128,6 +128,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                 </>
               )}
             </div>
+
+            {/* Contact Us Button */}
+            <Link
+              href="/contact"
+              className="hidden sm:block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+            >
+              {language === 'en' ? 'Contact Us' : '联系我们'}
+            </Link>
 
             {/* Language Toggle */}
             <div className="ml-4 flex items-center">
