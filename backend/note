@@ -9,12 +9,3 @@
 
 
 
-
-1 by default, we use EN version
-2 by default, we show nasdaq 100 index constituents
-3 in EN version, there are Nasdaq 100, S&P 500 , Dow Jone 30 in the nav bar,when clicking each of them,
-it show a dropdonw menu: index constituents, historical returns(empty page for now)
-4 so when clicking index constituents, the url should be /nasdaq100, /sp500, /dowjone30, the content should show
-their constituents
-5 in CN version, there are two more in the nav bar: QDII Fund Quotas, Mega 7+, when clicking each, it should show
-the respective content, that is, the current table remains unchanged

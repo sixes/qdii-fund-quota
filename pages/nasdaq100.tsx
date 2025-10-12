@@ -11,6 +11,7 @@ import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Pagination from '@mui/material/Pagination';
 import Navigation from '../components/Navigation';
+import IndexReturnsChart from '../components/IndexReturnsChart';
 
 export default function Nasdaq100Page() {
   const router = useRouter();
@@ -70,8 +71,12 @@ export default function Nasdaq100Page() {
 
         <main className="py-6">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+            <div className="mb-6 text-center">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Nasdaq 100 Index Constituents</h1>
+              <p className="text-gray-600 text-lg">View all Nasdaq 100 stocks with weights, last closing prices, ATH data, and key financial ratios</p>
+            </div>
             {view === 'returns' ? (
-              <div className="bg-white rounded-xl shadow p-6 text-gray-600">Historical returns view coming soon.</div>
+              <IndexReturnsChart indexKey="nasdaq100" indexName="Nasdaq 100" />
             ) : (
               <TableContainer component={Paper} className="rounded-xl shadow bg-white overflow-x-auto">
                 <Table stickyHeader size="small" sx={{ minWidth: { xs: 320, sm: 900 } }}>
