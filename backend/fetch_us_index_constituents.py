@@ -159,6 +159,7 @@ def save_to_dynamodb(table, index_name, constituents_data):
                     'market_cap': constituent.get('marketCap', ''),
                     'ath_price': Decimal(str(constituent['ath_price'])) if constituent.get('ath_price') is not None else None,
                     'ath_date': constituent.get('ath_date'),
+                    'ath_change_percent': Decimal(str(constituent['ath_change_percent'])) if constituent.get('ath_change_percent') is not None else None,
                     'pe_ratio': Decimal(str(constituent['pe_ratio'])) if constituent.get('pe_ratio') is not None else None,
                     'eps_ttm': Decimal(str(constituent['eps_ttm'])) if constituent.get('eps_ttm') is not None else None,
                     'ps_ratio': Decimal(str(constituent['ps_ratio'])) if constituent.get('ps_ratio') is not None else None,
@@ -724,7 +725,7 @@ def fetch_batch_stock_data(symbols, use_proxy=False):
         return {}, {}, {}
 
 def add_ath_data_to_constituents(constituents_data, ath_data):
-    """Add ATH price data to constituents list."""
+    """Add ATH price data and calculate ATH change percentage to constituents list."""
     if not constituents_data or not ath_data:
         return constituents_data
     
@@ -732,11 +733,21 @@ def add_ath_data_to_constituents(constituents_data, ath_data):
     for constituent in constituents_data:
         symbol = constituent.get('symbol')
         if symbol and symbol in ath_data:
-            constituent['ath_price'] = ath_data[symbol]['ath_price']
+            ath_price = ath_data[symbol]['ath_price']
+            constituent['ath_price'] = ath_price
             constituent['ath_date'] = ath_data[symbol]['ath_date']
+            
+            # Calculate ATH change percentage: (current_price - ath_price) / ath_price * 100
+            current_price = constituent.get('price', 0)
+            if ath_price and ath_price > 0 and current_price > 0:
+                ath_change_percent = ((current_price - ath_price) / ath_price) * 100
+                constituent['ath_change_percent'] = round(ath_change_percent, 2)
+            else:
+                constituent['ath_change_percent'] = None
+            
             updated_count += 1
     
-    logging.info(f"Added ATH data to {updated_count}/{len(constituents_data)} constituents")
+    logging.info(f"Added ATH data and change % to {updated_count}/{len(constituents_data)} constituents")
     return constituents_data
 
 def add_financial_ratios_to_constituents(constituents_data, ratios_data):
@@ -1020,6 +1031,7 @@ def load_existing_data_from_dynamodb(target_index):
                     'marketCap': item.get('market_cap', ''),
                     'ath_price': float(item.get('ath_price', 0)) if item.get('ath_price') else None,
                     'ath_date': item.get('ath_date'),
+                    'ath_change_percent': float(item.get('ath_change_percent', 0)) if item.get('ath_change_percent') else None,
                     'pe_ratio': float(item.get('pe_ratio', 0)) if item.get('pe_ratio') else None,
                     'eps_ttm': float(item.get('eps_ttm', 0)) if item.get('eps_ttm') else None,
                     'ps_ratio': float(item.get('ps_ratio', 0)) if item.get('ps_ratio') else None,
@@ -1070,7 +1082,8 @@ def update_ath_and_ratios_data(existing_data, use_proxy, ath_batch_size, ratio_b
             if symbol:
                 # Update ATH data
                 if symbol in ath_data:
-                    constituent['ath_price'] = ath_data[symbol]['ath_price']
+                    ath_price = ath_data[symbol]['ath_price']
+                    constituent['ath_price'] = ath_price
                     constituent['ath_date'] = ath_data[symbol]['ath_date']
                 
                 # Update ratios data
@@ -1085,8 +1098,17 @@ def update_ath_and_ratios_data(existing_data, use_proxy, ath_batch_size, ratio_b
                 # Update price and daily change data
                 if symbol in price_data:
                     price_info = price_data[symbol]
-                    constituent['price'] = price_info.get('current_price', constituent.get('price', 0))
+                    current_price = price_info.get('current_price', constituent.get('price', 0))
+                    constituent['price'] = current_price
                     constituent['change'] = price_info.get('daily_change_percent', 0)
+                    
+                    # Calculate ATH change percentage if we have both ATH and current price
+                    ath_price = constituent.get('ath_price')
+                    if ath_price and ath_price > 0 and current_price > 0:
+                        ath_change_percent = ((current_price - ath_price) / ath_price) * 100
+                        constituent['ath_change_percent'] = round(ath_change_percent, 2)
+                    else:
+                        constituent['ath_change_percent'] = None
     
     logging.info(f"ATH update: {total_ath_success} success, {total_ath_failed} failed")
     logging.info(f"Ratios update: {total_ratios_success} success, {total_ratios_failed} failed")

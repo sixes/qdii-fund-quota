@@ -106,6 +106,7 @@ export default function SP500Page() {
                       <TableCell><TableSortLabel active={sortKey==='name'} direction={sortKey==='name'?sortDirection:'asc'} onClick={()=>handleSort('name')}>Company Name</TableSortLabel></TableCell>
                       <TableCell><TableSortLabel active={sortKey==='ath_price'} direction={sortKey==='ath_price'?sortDirection:'desc'} onClick={()=>handleSort('ath_price')}>ATH Price</TableSortLabel></TableCell>
                       <TableCell><TableSortLabel active={sortKey==='ath_date'} direction={sortKey==='ath_date'?sortDirection:'desc'} onClick={()=>handleSort('ath_date')}>ATH Date</TableSortLabel></TableCell>
+                      <TableCell><TableSortLabel active={sortKey==='ath_change_percent'} direction={sortKey==='ath_change_percent'?sortDirection:'asc'} onClick={()=>handleSort('ath_change_percent')}>ATH Change %</TableSortLabel></TableCell>
                       <TableCell><TableSortLabel active={sortKey==='price'} direction={sortKey==='price'?sortDirection:'desc'} onClick={()=>handleSort('price')}>Price</TableSortLabel></TableCell>
                       <TableCell><TableSortLabel active={sortKey==='change'} direction={sortKey==='change'?sortDirection:'desc'} onClick={()=>handleSort('change')}>Change %</TableSortLabel></TableCell>
                       <TableCell><TableSortLabel active={sortKey==='weight'} direction={sortKey==='weight'?sortDirection:'desc'} onClick={()=>handleSort('weight')}>Weight %</TableSortLabel></TableCell>
@@ -119,9 +120,9 @@ export default function SP500Page() {
                   </TableHead>
                   <TableBody>
                     {loading ? (
-                      <TableRow><TableCell colSpan={14} align="center" className="py-8 text-gray-500">Loading...</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={15} align="center" className="py-8 text-gray-500">Loading...</TableCell></TableRow>
                     ) : data.length === 0 ? (
-                      <TableRow><TableCell colSpan={14} align="center" className="py-8 text-gray-500">No data available</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={15} align="center" className="py-8 text-gray-500">No data available</TableCell></TableRow>
                     ) : (
                       paged.map((row, i) => (
                         <TableRow key={i} className="hover:bg-gray-50 transition">
@@ -130,6 +131,9 @@ export default function SP500Page() {
                           <TableCell>{row.name}</TableCell>
                           <TableCell>{row.ath_price ? `$${row.ath_price.toFixed(2)}` : '-'}</TableCell>
                           <TableCell>{row.ath_date || '-'}</TableCell>
+                          <TableCell style={{ color: row.ath_change_percent && row.ath_change_percent < 0 ? 'red' : row.ath_change_percent && row.ath_change_percent >= 0 ? 'green' : undefined }}>
+                            {row.ath_change_percent !== null && row.ath_change_percent !== undefined ? `${row.ath_change_percent > 0 ? '+' : ''}${row.ath_change_percent.toFixed(2)}%` : '-'}
+                          </TableCell>
                           <TableCell>{row.price ? `$${row.price.toFixed(2)}` : '-'}</TableCell>
                           <TableCell style={{ color: row.change > 0 ? 'green' : row.change < 0 ? 'red' : undefined }}>{row.change ? `${row.change > 0 ? '+' : ''}${row.change.toFixed(2)}%` : '-'}</TableCell>
                           <TableCell>{row.weight ? `${row.weight.toFixed(2)}%` : '-'}</TableCell>
