@@ -10,10 +10,12 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Pagination from '@mui/material/Pagination';
+import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/react';
 import Navigation from '../components/Navigation';
 import IndexReturnsChart from '../components/IndexReturnsChart';
 
-export default function Nasdaq100Page() {
+function Nasdaq100() {
   const router = useRouter();
   const view = (router.query.view as string) || 'constituents';
   const [data, setData] = useState<any[]>([]);
@@ -62,9 +64,26 @@ export default function Nasdaq100Page() {
   return (
     <>
       <Head>
-        <title>Nasdaq 100 - Index Constituents</title>
-        <meta name="description" content="Nasdaq 100 constituents and historical returns" />
+        <title>Nasdaq 100 Index - Constituents & Historical Returns | NDX Stock Analysis</title>
+        <meta name="description" content="View Nasdaq 100 (NDX) index constituents with real-time data, weights, prices, ATH analysis, and historical returns. Track top tech stocks like Apple, Microsoft, Nvidia, Tesla, and Meta with PE ratios and market cap data." />
+        <meta name="keywords" content="Nasdaq 100, NDX, Nasdaq index, tech stocks, AAPL, MSFT, NVDA, TSLA, META, GOOGL, AMZN, index constituents, stock weights, historical returns, P/E ratio, market cap, ATH analysis, technology stocks, US stock market" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Nasdaq 100 Index - Constituents & Historical Returns" />
+        <meta property="og:description" content="Comprehensive Nasdaq 100 analysis with real-time constituent data, weights, prices, and historical performance charts." />
+        <meta property="og:type" content="website" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://yoursite.com/nasdaq100" />
       </Head>
+
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
+      <Script id="google-analytics" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);} 
+          gtag('js', new Date());
+          gtag('config', 'G-KYCK18CLKM');
+        `}
+      </Script>
 
             <div className="min-h-screen bg-gray-100">
         <Navigation language={language} onLanguageChange={setLanguage} />
@@ -141,6 +160,9 @@ export default function Nasdaq100Page() {
           </div>
         </main>
       </div>
+      <Analytics />
     </>
   );
 }
+
+export default Nasdaq100;

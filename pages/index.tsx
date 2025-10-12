@@ -510,7 +510,7 @@ export default function Home() {
                   </div>
                   <div className="flex gap-4">
                     <div className="flex-1">
-                      <Autocomplete options={['', '法国', '美国', '欧洲', '日本', '越南', '印度', '亚洲', '中国']} value={filters.country} onChange={(_, value) => { const newFilters = { ...filters, country: value || '' }; setFilters(newFilters); fetchData(newFilters); }} renderInput={(params) => <TextField {...params} label="地区" variant="outlined" size="small" className="text-xs sm:text-sm" />} clearOnEscape />
+                      <Autocomplete options={['', '法国', '美国', '欧洲', '日本', '越南', '印度', '亚洲', '中国']} value={filters.country} onChange={(_, value) => { const newFilters = { ...filters, country: value || '' }; setFilters(newFilters); fetchData(newFilters); }} renderInput={(params) => <TextField {...params} label="投资地区" variant="outlined" size="small" className="text-xs sm:text-sm" />} clearOnEscape />
                     </div>
                     <div className="flex-1">
                       <TextField label="基金代码" variant="outlined" size="small" className="text-xs sm:text-sm" value={filters.fund_code} onChange={e => setFilters(f => ({ ...f, fund_code: e.target.value }))} InputProps={{ startAdornment: <span style={{ color: '#9ca3af', marginRight: 4 }}>#</span> }} fullWidth />

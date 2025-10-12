@@ -10,6 +10,8 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Pagination from '@mui/material/Pagination';
+import Script from 'next/script';
+import { Analytics } from '@vercel/analytics/react';
 import Navigation from '../components/Navigation';
 import IndexReturnsChart from '../components/IndexReturnsChart';
 
@@ -62,9 +64,26 @@ export default function SP500Page() {
   return (
     <>
       <Head>
-        <title>S&P 500 - Index Constituents</title>
-        <meta name="description" content="S&P 500 constituents and historical returns" />
+        <title>S&P 500 Index - Constituents & Historical Returns | SPX Stock Analysis</title>
+        <meta name="description" content="View S&P 500 (SPX) index constituents with real-time data, weights, prices, ATH analysis, and historical returns. Track 500 leading US companies across all sectors with financial ratios, market cap, and performance charts." />
+        <meta name="keywords" content="S&P 500, SPX, SP500, S&P index, US stocks, large cap stocks, index constituents, stock weights, historical returns, P/E ratio, market cap, ATH analysis, sector performance, blue chip stocks, US stock market, investment analysis" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="S&P 500 Index - Constituents & Historical Returns" />
+        <meta property="og:description" content="Comprehensive S&P 500 analysis with real-time constituent data, sector weights, prices, and historical performance charts." />
+        <meta property="og:type" content="website" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://yoursite.com/sp500" />
       </Head>
+
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
+      <Script id="google-analytics" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);} 
+          gtag('js', new Date());
+          gtag('config', 'G-KYCK18CLKM');
+        `}
+      </Script>
 
             <div className="min-h-screen bg-gray-100">
         <Navigation language={language} onLanguageChange={setLanguage} />
@@ -141,6 +160,7 @@ export default function SP500Page() {
           </div>
         </main>
       </div>
+      <Analytics />
     </>
   );
 }
