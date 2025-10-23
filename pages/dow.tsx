@@ -15,6 +15,7 @@ import { Analytics } from '@vercel/analytics/react';
 import Navigation from '../components/Navigation';
 import IndexReturnsChart from '../components/IndexReturnsChart';
 import { useTranslation } from '../lib/translations';
+import Footer from '../components/Footer';
 
 function DowPage() {
   const router = useRouter();
@@ -104,7 +105,7 @@ function DowPage() {
         `}
       </Script>
 
-            <div className="min-h-screen bg-gray-100">
+            <div className="min-h-screen bg-gray-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />
 
         <main className="py-6">
@@ -182,6 +183,7 @@ function DowPage() {
             )}
           </div>
         </main>
+        <Footer language={language} />
       </div>
       <Analytics />
     </>

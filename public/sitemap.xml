@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Home Page -->
+  <url>
+    <loc>https://qdiiquota.pro/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Index Pages -->
+  <url>
+    <loc>https://qdiiquota.pro/nasdaq100</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/nasdaq100" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/nasdaq100?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://qdiiquota.pro/sp500</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/sp500" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/sp500?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://qdiiquota.pro/dow</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/dow" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/dow?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Returns Pages -->
+  <url>
+    <loc>https://qdiiquota.pro/nasdaq100?view=returns</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/nasdaq100?view=returns" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/nasdaq100?view=returns&amp;lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qdiiquota.pro/sp500?view=returns</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/sp500?view=returns" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/sp500?view=returns&amp;lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://qdiiquota.pro/dow?view=returns</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/dow?view=returns" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/dow?view=returns&amp;lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Contact Page -->
+  <url>
+    <loc>https://qdiiquota.pro/contact</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/contact" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/contact?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- About Page -->
+  <url>
+    <loc>https://qdiiquota.pro/about</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/about" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/about?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Legal Pages -->
+  <url>
+    <loc>https://qdiiquota.pro/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/terms" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/terms?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://qdiiquota.pro/privacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/privacy" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/privacy?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://qdiiquota.pro/disclaimer</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://qdiiquota.pro/disclaimer" />
+    <xhtml:link rel="alternate" hreflang="zh" href="https://qdiiquota.pro/disclaimer?lang=zh" />
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+</urlset>

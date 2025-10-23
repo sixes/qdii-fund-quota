@@ -101,6 +101,21 @@ export const translations = {
       years: "years",
       averageReturn: "Average Return",
       perYear: "per year"
+    },
+    // Footer
+    footer: {
+      about: "About",
+      aboutText: "Providing comprehensive data on US stock indices and QDII fund quotas.",
+      quickLinks: "Quick Links",
+      aboutUs: "About Us",
+      contactUs: "Contact Us",
+      legal: "Legal",
+      termsOfUse: "Terms of Use",
+      privacyPolicy: "Privacy Policy",
+      dataDisclaimer: "Data Disclaimer",
+      resources: "Resources",
+      copyright: "All rights reserved.",
+      sitemap: "Sitemap"
     }
   },
   zh: {
@@ -205,6 +220,21 @@ export const translations = {
       years: "年",
       averageReturn: "平均回报",
       perYear: "每年"
+    },
+    // Footer
+    footer: {
+      about: "关于",
+      aboutText: "提供美股指数和QDII基金额度的综合数据。",
+      quickLinks: "快速链接",
+      aboutUs: "关于我们",
+      contactUs: "联系我们",
+      legal: "法律信息",
+      termsOfUse: "使用条款",
+      privacyPolicy: "隐私政策",
+      dataDisclaimer: "数据免责声明",
+      resources: "资源",
+      copyright: "版权所有。",
+      sitemap: "网站地图"
     }
   }
 };

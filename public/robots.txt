@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://qdiiquota.pro/sitemap.xml
+
+# Disallow API routes
+Disallow: /api/
+
+# Allow all other pages
+Allow: /
+Allow: /nasdaq100
+Allow: /sp500
+Allow: /dow
+Allow: /contact
+Allow: /about
+Allow: /terms
+Allow: /privacy
+Allow: /disclaimer

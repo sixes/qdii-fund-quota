@@ -6,6 +6,7 @@ import { Analytics } from '@vercel/analytics/react';
 import Script from 'next/script';
 import { useRouter } from 'next/router';
 import { useTranslation } from '../lib/translations';
+import Footer from '../components/Footer';
 
 export default function Contact() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function Contact() {
           gtag('config', 'G-KYCK18CLKM');
         `}</Script>
 
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
           <Navigation language={language} onLanguageChange={handleLanguageChange} />
           <main className="py-10">
             <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -83,6 +84,7 @@ export default function Contact() {
               </div>
             </div>
           </main>
+          <Footer language={language} />
         </div>
         <Analytics />
       </>
@@ -106,10 +108,10 @@ export default function Contact() {
           gtag('config', 'G-KYCK18CLKM');
         `}</Script>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />
         
-        <main className="py-10">
+        <main className="flex-grow py-10">
           <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-8">
               <h1 className="text-3xl md:text-4xl font-bold text-indigo-700 mb-2">{t.contact.heading}</h1>
@@ -176,6 +178,7 @@ export default function Contact() {
 
           </div>
         </main>
+        <Footer language={language} />
       </div>
       <Analytics />
     </>

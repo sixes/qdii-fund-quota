@@ -15,6 +15,7 @@ import { Analytics } from '@vercel/analytics/react';
 import Navigation from '../components/Navigation';
 import IndexReturnsChart from '../components/IndexReturnsChart';
 import { useTranslation } from '../lib/translations';
+import Footer from '../components/Footer';
 
 function SP500() {
   const router = useRouter();
@@ -97,7 +98,7 @@ function SP500() {
         `}
       </Script>
 
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gray-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />
 
         <main className="py-6">
@@ -175,6 +176,7 @@ function SP500() {
             )}
           </div>
         </main>
+        <Footer language={language} />
       </div>
       <Analytics />
     </>
