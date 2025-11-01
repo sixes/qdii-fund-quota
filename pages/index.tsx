@@ -116,6 +116,11 @@ export default function Home() {
   const [uproChartData, setUproChartData] = useState<any>(null);
   const [udowChartData, setUdowChartData] = useState<any>(null);
   
+  // -1x Inverse ETF chart data states
+  const [psqChartData, setPsqChartData] = useState<any>(null);
+  const [shChartData, setShChartData] = useState<any>(null);
+  const [dogChartData, setDogChartData] = useState<any>(null);
+  
   // -2x Inverse Leveraged ETF chart data states
   const [qidChartData, setQidChartData] = useState<any>(null);
   const [sdsChartData, setSdsChartData] = useState<any>(null);
@@ -125,6 +130,9 @@ export default function Home() {
   const [sqqqChartData, setSqqqChartData] = useState<any>(null);
   const [spxuChartData, setSpxuChartData] = useState<any>(null);
   const [sdowChartData, setSdowChartData] = useState<any>(null);
+  
+  // View mode state
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'));
 
@@ -497,7 +505,7 @@ export default function Home() {
         setChartsLoading(true);
         try {
           // Fetch intraday data (1 day period with minute intervals) for all indices, ETFs, and leveraged ETFs
-          const [nasdaq, sp500, dow, qqq, spy, dia, qld, sso, ddm, tqqq, upro, udow, qid, sds, dow2, sqqq, spxu, sdow] = await Promise.all([
+          const [nasdaq, sp500, dow, qqq, spy, dia, qld, sso, ddm, tqqq, upro, udow, psq, sh, dog, qid, sds, dow2, sqqq, spxu, sdow] = await Promise.all([
             fetch('/api/index-chart?symbol=^NDX&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=^GSPC&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=^DJI&period=1d&interval=1m').then(r => r.json()),
@@ -510,6 +518,9 @@ export default function Home() {
             fetch('/api/index-chart?symbol=TQQQ&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=UPRO&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=UDOW&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=PSQ&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SH&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=DOG&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=QID&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=SDS&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=DOG&period=1d&interval=1m').then(r => r.json()),
@@ -860,6 +871,69 @@ export default function Home() {
             }
           }
           
+          // Process PSQ -1x Inverse ETF - show only last trading day minute data
+          if (psq.dates && psq.prices && psq.prices.length > 0) {
+            const filtered = filterLastTradingDay(psq.dates, psq.prices, psq.previousClose);
+            if (filtered.prices.length > 0) {
+              setPsqChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'PSQ -1x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(168, 85, 247)',
+                  backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SH -1x Inverse ETF - show only last trading day minute data
+          if (sh.dates && sh.prices && sh.prices.length > 0) {
+            const filtered = filterLastTradingDay(sh.dates, sh.prices, sh.previousClose);
+            if (filtered.prices.length > 0) {
+              setShChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SH -1x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(20, 184, 166)',
+                  backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process DOG -1x Inverse ETF - show only last trading day minute data
+          if (dog.dates && dog.prices && dog.prices.length > 0) {
+            const filtered = filterLastTradingDay(dog.dates, dog.prices, dog.previousClose);
+            if (filtered.prices.length > 0) {
+              setDogChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'DOG -1x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(251, 113, 133)',
+                  backgroundColor: 'rgba(251, 113, 133, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
           // Process QID -2x Inverse Leveraged ETF - show only last trading day minute data
           if (qid.dates && qid.prices && qid.prices.length > 0) {
             const filtered = filterLastTradingDay(qid.dates, qid.prices, qid.previousClose);
@@ -1026,6 +1100,33 @@ export default function Home() {
                 <p className="text-gray-600 text-lg">Real-time overview of major US stock indices</p>
               </div>
               
+              {/* View Mode Toggle */}
+              <div className="mb-6 flex justify-end items-center gap-3">
+                <span className="text-sm text-gray-600">View:</span>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    viewMode === 'grid'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Grid
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    viewMode === 'table'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Table
+                </button>
+              </div>
+              
+              {viewMode === 'grid' ? (
+                <>
               {/* Index Charts Grid */}
               <div className="mb-4">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Major Indices</h2>
@@ -1470,6 +1571,66 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* -1x Inverse ETF Charts Grid */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">-1x Inverse ETFs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* PSQ -1x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">PSQ (-1x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : psqChartData ? (
+                        <Line data={psqChartData} options={getETFChartOptions('PSQ', psqChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(psqChartData, 'PSQ')}
+                      <p className="text-sm text-gray-600">-1x Nasdaq 100 (Short)</p>
+                    </div>
+                  </div>
+
+                  {/* SH -1x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SH (-1x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : shChartData ? (
+                        <Line data={shChartData} options={getETFChartOptions('SH', shChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(shChartData, 'SH')}
+                      <p className="text-sm text-gray-600">-1x S&P 500 (Short)</p>
+                    </div>
+                  </div>
+
+                  {/* DOG -1x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">DOG (-1x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : dogChartData ? (
+                        <Line data={dogChartData} options={getETFChartOptions('DOG', dogChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(dogChartData, 'DOG')}
+                      <p className="text-sm text-gray-600">-1x Dow Jones (Short)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* -2x Inverse Leveraged ETF Charts Grid */}
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">-2x Inverse Leveraged ETFs</h2>
@@ -1589,6 +1750,325 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+                </>
+              ) : (
+                /* Table View */
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">All Indices and ETFs</h2>
+                  
+                  {/* Nasdaq 100 Family Table */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4">Nasdaq 100 Index & Related ETFs</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-blue-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leverage</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Previous Close</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Latest Price</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* Nasdaq 100 Index */}
+                          {nasdaq100ChartData && nasdaq100ChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-blue-50 bg-blue-25">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">Nasdaq 100 Index</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{nasdaq100ChartData.datasets[0].firstValue.toLocaleString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1].toLocaleString()}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1] - nasdaq100ChartData.datasets[0].firstValue) / nasdaq100ChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1] - nasdaq100ChartData.datasets[0].firstValue) / nasdaq100ChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1] - nasdaq100ChartData.datasets[0].firstValue) / nasdaq100ChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* QQQ 1x */}
+                          {qqqChartData && qqqChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">QQQ</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">1x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${qqqChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${qqqChartData.datasets[0].data[qqqChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((qqqChartData.datasets[0].data[qqqChartData.datasets[0].data.length - 1] - qqqChartData.datasets[0].firstValue) / qqqChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((qqqChartData.datasets[0].data[qqqChartData.datasets[0].data.length - 1] - qqqChartData.datasets[0].firstValue) / qqqChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((qqqChartData.datasets[0].data[qqqChartData.datasets[0].data.length - 1] - qqqChartData.datasets[0].firstValue) / qqqChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* QLD 2x */}
+                          {qldChartData && qldChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">QLD</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">2x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${qldChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${qldChartData.datasets[0].data[qldChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((qldChartData.datasets[0].data[qldChartData.datasets[0].data.length - 1] - qldChartData.datasets[0].firstValue) / qldChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((qldChartData.datasets[0].data[qldChartData.datasets[0].data.length - 1] - qldChartData.datasets[0].firstValue) / qldChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((qldChartData.datasets[0].data[qldChartData.datasets[0].data.length - 1] - qldChartData.datasets[0].firstValue) / qldChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* TQQQ 3x */}
+                          {tqqqChartData && tqqqChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">TQQQ</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">3x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${tqqqChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${tqqqChartData.datasets[0].data[tqqqChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((tqqqChartData.datasets[0].data[tqqqChartData.datasets[0].data.length - 1] - tqqqChartData.datasets[0].firstValue) / tqqqChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((tqqqChartData.datasets[0].data[tqqqChartData.datasets[0].data.length - 1] - tqqqChartData.datasets[0].firstValue) / tqqqChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((tqqqChartData.datasets[0].data[tqqqChartData.datasets[0].data.length - 1] - tqqqChartData.datasets[0].firstValue) / tqqqChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* PSQ -1x */}
+                          {psqChartData && psqChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">PSQ</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-1x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${psqChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${psqChartData.datasets[0].data[psqChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((psqChartData.datasets[0].data[psqChartData.datasets[0].data.length - 1] - psqChartData.datasets[0].firstValue) / psqChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((psqChartData.datasets[0].data[psqChartData.datasets[0].data.length - 1] - psqChartData.datasets[0].firstValue) / psqChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((psqChartData.datasets[0].data[psqChartData.datasets[0].data.length - 1] - psqChartData.datasets[0].firstValue) / psqChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* QID -2x */}
+                          {qidChartData && qidChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">QID</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-2x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${qidChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${qidChartData.datasets[0].data[qidChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((qidChartData.datasets[0].data[qidChartData.datasets[0].data.length - 1] - qidChartData.datasets[0].firstValue) / qidChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((qidChartData.datasets[0].data[qidChartData.datasets[0].data.length - 1] - qidChartData.datasets[0].firstValue) / qidChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((qidChartData.datasets[0].data[qidChartData.datasets[0].data.length - 1] - qidChartData.datasets[0].firstValue) / qidChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SQQQ -3x */}
+                          {sqqqChartData && sqqqChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SQQQ</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-3x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${sqqqChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${sqqqChartData.datasets[0].data[sqqqChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((sqqqChartData.datasets[0].data[sqqqChartData.datasets[0].data.length - 1] - sqqqChartData.datasets[0].firstValue) / sqqqChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((sqqqChartData.datasets[0].data[sqqqChartData.datasets[0].data.length - 1] - sqqqChartData.datasets[0].firstValue) / sqqqChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((sqqqChartData.datasets[0].data[sqqqChartData.datasets[0].data.length - 1] - sqqqChartData.datasets[0].firstValue) / sqqqChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* S&P 500 Family Table */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4">S&P 500 Index & Related ETFs</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-green-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leverage</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Previous Close</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Latest Price</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* S&P 500 Index */}
+                          {sp500ChartData && sp500ChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-green-50 bg-green-25">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">S&P 500 Index</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{sp500ChartData.datasets[0].firstValue.toLocaleString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1].toLocaleString()}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1] - sp500ChartData.datasets[0].firstValue) / sp500ChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1] - sp500ChartData.datasets[0].firstValue) / sp500ChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1] - sp500ChartData.datasets[0].firstValue) / sp500ChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SPY 1x */}
+                          {spyChartData && spyChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SPY</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">1x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${spyChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${spyChartData.datasets[0].data[spyChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((spyChartData.datasets[0].data[spyChartData.datasets[0].data.length - 1] - spyChartData.datasets[0].firstValue) / spyChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((spyChartData.datasets[0].data[spyChartData.datasets[0].data.length - 1] - spyChartData.datasets[0].firstValue) / spyChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((spyChartData.datasets[0].data[spyChartData.datasets[0].data.length - 1] - spyChartData.datasets[0].firstValue) / spyChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SSO 2x */}
+                          {ssoChartData && ssoChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SSO</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">2x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${ssoChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${ssoChartData.datasets[0].data[ssoChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((ssoChartData.datasets[0].data[ssoChartData.datasets[0].data.length - 1] - ssoChartData.datasets[0].firstValue) / ssoChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((ssoChartData.datasets[0].data[ssoChartData.datasets[0].data.length - 1] - ssoChartData.datasets[0].firstValue) / ssoChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((ssoChartData.datasets[0].data[ssoChartData.datasets[0].data.length - 1] - ssoChartData.datasets[0].firstValue) / ssoChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* UPRO 3x */}
+                          {uproChartData && uproChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">UPRO</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">3x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${uproChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${uproChartData.datasets[0].data[uproChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((uproChartData.datasets[0].data[uproChartData.datasets[0].data.length - 1] - uproChartData.datasets[0].firstValue) / uproChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((uproChartData.datasets[0].data[uproChartData.datasets[0].data.length - 1] - uproChartData.datasets[0].firstValue) / uproChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((uproChartData.datasets[0].data[uproChartData.datasets[0].data.length - 1] - uproChartData.datasets[0].firstValue) / uproChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SH -1x */}
+                          {shChartData && shChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SH</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-1x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${shChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${shChartData.datasets[0].data[shChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((shChartData.datasets[0].data[shChartData.datasets[0].data.length - 1] - shChartData.datasets[0].firstValue) / shChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((shChartData.datasets[0].data[shChartData.datasets[0].data.length - 1] - shChartData.datasets[0].firstValue) / shChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((shChartData.datasets[0].data[shChartData.datasets[0].data.length - 1] - shChartData.datasets[0].firstValue) / shChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SDS -2x */}
+                          {sdsChartData && sdsChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SDS</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-2x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${sdsChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${sdsChartData.datasets[0].data[sdsChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((sdsChartData.datasets[0].data[sdsChartData.datasets[0].data.length - 1] - sdsChartData.datasets[0].firstValue) / sdsChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((sdsChartData.datasets[0].data[sdsChartData.datasets[0].data.length - 1] - sdsChartData.datasets[0].firstValue) / sdsChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((sdsChartData.datasets[0].data[sdsChartData.datasets[0].data.length - 1] - sdsChartData.datasets[0].firstValue) / sdsChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SPXU -3x */}
+                          {spxuChartData && spxuChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SPXU</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-3x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${spxuChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${spxuChartData.datasets[0].data[spxuChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((spxuChartData.datasets[0].data[spxuChartData.datasets[0].data.length - 1] - spxuChartData.datasets[0].firstValue) / spxuChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((spxuChartData.datasets[0].data[spxuChartData.datasets[0].data.length - 1] - spxuChartData.datasets[0].firstValue) / spxuChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((spxuChartData.datasets[0].data[spxuChartData.datasets[0].data.length - 1] - spxuChartData.datasets[0].firstValue) / spxuChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Dow Jones Family Table */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4">Dow Jones Index & Related ETFs</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-red-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Leverage</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Previous Close</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Latest Price</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* Dow Jones Index */}
+                          {dowChartData && dowChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-red-50 bg-red-25">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">Dow Jones Index</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{dowChartData.datasets[0].firstValue.toLocaleString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">{dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1].toLocaleString()}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1] - dowChartData.datasets[0].firstValue) / dowChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1] - dowChartData.datasets[0].firstValue) / dowChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1] - dowChartData.datasets[0].firstValue) / dowChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* DIA 1x */}
+                          {diaChartData && diaChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DIA</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">1x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${diaChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${diaChartData.datasets[0].data[diaChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((diaChartData.datasets[0].data[diaChartData.datasets[0].data.length - 1] - diaChartData.datasets[0].firstValue) / diaChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((diaChartData.datasets[0].data[diaChartData.datasets[0].data.length - 1] - diaChartData.datasets[0].firstValue) / diaChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((diaChartData.datasets[0].data[diaChartData.datasets[0].data.length - 1] - diaChartData.datasets[0].firstValue) / diaChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* DDM 2x */}
+                          {ddmChartData && ddmChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DDM</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">2x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${ddmChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${ddmChartData.datasets[0].data[ddmChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((ddmChartData.datasets[0].data[ddmChartData.datasets[0].data.length - 1] - ddmChartData.datasets[0].firstValue) / ddmChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((ddmChartData.datasets[0].data[ddmChartData.datasets[0].data.length - 1] - ddmChartData.datasets[0].firstValue) / ddmChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((ddmChartData.datasets[0].data[ddmChartData.datasets[0].data.length - 1] - ddmChartData.datasets[0].firstValue) / ddmChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* UDOW 3x */}
+                          {udowChartData && udowChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">UDOW</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">3x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${udowChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${udowChartData.datasets[0].data[udowChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((udowChartData.datasets[0].data[udowChartData.datasets[0].data.length - 1] - udowChartData.datasets[0].firstValue) / udowChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((udowChartData.datasets[0].data[udowChartData.datasets[0].data.length - 1] - udowChartData.datasets[0].firstValue) / udowChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((udowChartData.datasets[0].data[udowChartData.datasets[0].data.length - 1] - udowChartData.datasets[0].firstValue) / udowChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* DOG -1x */}
+                          {dogChartData && dogChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DOG</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-1x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${dogChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${dogChartData.datasets[0].data[dogChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((dogChartData.datasets[0].data[dogChartData.datasets[0].data.length - 1] - dogChartData.datasets[0].firstValue) / dogChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((dogChartData.datasets[0].data[dogChartData.datasets[0].data.length - 1] - dogChartData.datasets[0].firstValue) / dogChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((dogChartData.datasets[0].data[dogChartData.datasets[0].data.length - 1] - dogChartData.datasets[0].firstValue) / dogChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* DOG -2x */}
+                          {dowChartData2 && dowChartData2.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DOG</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-2x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${dowChartData2.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${dowChartData2.datasets[0].data[dowChartData2.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((dowChartData2.datasets[0].data[dowChartData2.datasets[0].data.length - 1] - dowChartData2.datasets[0].firstValue) / dowChartData2.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((dowChartData2.datasets[0].data[dowChartData2.datasets[0].data.length - 1] - dowChartData2.datasets[0].firstValue) / dowChartData2.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((dowChartData2.datasets[0].data[dowChartData2.datasets[0].data.length - 1] - dowChartData2.datasets[0].firstValue) / dowChartData2.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                          {/* SDOW -3x */}
+                          {sdowChartData && sdowChartData.datasets[0].data.length > 0 && (
+                            <tr className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">SDOW</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-3x</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${sdowChartData.datasets[0].firstValue.toFixed(2)}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${sdowChartData.datasets[0].data[sdowChartData.datasets[0].data.length - 1].toFixed(2)}</td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-semibold ${((sdowChartData.datasets[0].data[sdowChartData.datasets[0].data.length - 1] - sdowChartData.datasets[0].firstValue) / sdowChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {((sdowChartData.datasets[0].data[sdowChartData.datasets[0].data.length - 1] - sdowChartData.datasets[0].firstValue) / sdowChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((sdowChartData.datasets[0].data[sdowChartData.datasets[0].data.length - 1] - sdowChartData.datasets[0].firstValue) / sdowChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Hidden table container for compatibility */}
               <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white overflow-x-auto" style={{ display: 'none' }}>
