@@ -9,3 +9,12 @@
 
 
 
+I want to backtest one idea:
+for the mag 7 stocks, if any of them drop by 10% or 20% from the all time high price, 
+allocate one portion of fund to buy that stock.
+the ath price means that the highest price that stock has reached so far to the current date, 
+you can't use future data to determine the ath price.
+at the same time, we need to use the same amount of fund to invest in QQQ, then we compare these
+two investment returns after a period of time, say 1 month, 3 months, 6 months, 1 year.
+create a new python script to implement this backtest idea, using yfinance to get stock data.
+use matplotlib to plot the investment returns comparison chart.

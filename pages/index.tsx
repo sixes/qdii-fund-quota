@@ -26,6 +26,31 @@ import { Analytics } from '@vercel/analytics/react';
 import Link from 'next/link';
 import Navigation from '../components/Navigation';
 import { useRouter } from 'next/router';
+import Footer from '../components/Footer';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 export default function Home() {
   const router = useRouter();
@@ -69,6 +94,37 @@ export default function Home() {
   const [indexSortDirection, setIndexSortDirection] = useState<'asc' | 'desc'>('asc');
   const [language, setLanguage] = useState<'en' | 'zh'>('en');
   const [openMenu, setOpenMenu] = useState<null | 'nasdaq100' | 'sp500' | 'dow'>(null);
+  
+  // Index chart data states
+  const [nasdaq100ChartData, setNasdaq100ChartData] = useState<any>(null);
+  const [sp500ChartData, setSp500ChartData] = useState<any>(null);
+  const [dowChartData, setDowChartData] = useState<any>(null);
+  const [chartsLoading, setChartsLoading] = useState(false);
+  
+  // ETF chart data states
+  const [qqqChartData, setQqqChartData] = useState<any>(null);
+  const [spyChartData, setSpyChartData] = useState<any>(null);
+  const [diaChartData, setDiaChartData] = useState<any>(null);
+  
+  // 2x Leveraged ETF chart data states
+  const [qldChartData, setQldChartData] = useState<any>(null);
+  const [ssoChartData, setSsoChartData] = useState<any>(null);
+  const [ddmChartData, setDdmChartData] = useState<any>(null);
+  
+  // 3x Leveraged ETF chart data states
+  const [tqqqChartData, setTqqqChartData] = useState<any>(null);
+  const [uproChartData, setUproChartData] = useState<any>(null);
+  const [udowChartData, setUdowChartData] = useState<any>(null);
+  
+  // -2x Inverse Leveraged ETF chart data states
+  const [qidChartData, setQidChartData] = useState<any>(null);
+  const [sdsChartData, setSdsChartData] = useState<any>(null);
+  const [dowChartData2, setDowChartData2] = useState<any>(null);
+  
+  // -3x Inverse Leveraged ETF chart data states
+  const [sqqqChartData, setSqqqChartData] = useState<any>(null);
+  const [spxuChartData, setSpxuChartData] = useState<any>(null);
+  const [sdowChartData, setSdowChartData] = useState<any>(null);
 
   const companyList = ["易方达", "长城", "景顺长城", "华泰证券", "国海富兰克林", "鹏华", "中银", "博时", "嘉实", "华夏", "汇添富", "天弘", "工银瑞信", "摩根", "大成", "国泰", "建信", "宝盈", "华泰柏瑞", "南方", "万家", "广发", "华安", "华宝", "招商", "海富通"].sort((a, b) => a.charAt(0).localeCompare(b.charAt(0), 'zh'));
 
@@ -358,6 +414,588 @@ export default function Home() {
     }
   };
 
+  // Chart options generator for ETFs
+  const getETFChartOptions = (label: string, previousClose: number) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+        callbacks: {
+          label: function(context: any) {
+            const value = context.parsed.y;
+            const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
+            return `${label}: $${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: { display: false },
+      y: { 
+        position: 'left' as const,
+        ticks: {
+          callback: function(value: any) {
+            return '$' + value.toLocaleString();
+          }
+        }
+      },
+      y1: {
+        type: 'linear' as const,
+        position: 'right' as const,
+        grid: { display: false },
+        // Link Y1 axis to Y axis so they share the same scale
+        afterDataLimits: function(axis: any) {
+          const chart = axis.chart;
+          const yAxis = chart.scales.y;
+          // Set Y1 min/max to match Y axis
+          axis.min = yAxis.min;
+          axis.max = yAxis.max;
+        },
+        ticks: {
+          callback: function(tickValue: any) {
+            // tickValue is the Y-axis price value at this tick position
+            const percentChange = ((tickValue - previousClose) / previousClose * 100).toFixed(1);
+            return percentChange + '%';
+          }
+        }
+      }
+    }
+  });
+
+  // Helper function to render ETF data display
+  const renderETFDataDisplay = (chartData: any, label: string) => {
+    if (!chartData || !chartData.datasets[0].data.length) return null;
+    const data = chartData.datasets[0].data;
+    const latestValue = data[data.length - 1]; // Last minute value
+    const previousClose = chartData.datasets[0].firstValue; // Previous day's closing price
+    const percentChange = ((latestValue - previousClose) / previousClose * 100);
+    
+    return (
+      <div className="mb-3">
+        <p className="text-sm text-gray-600">
+          Latest: <span className="font-semibold">${latestValue.toFixed(2)}</span>
+        </p>
+        <p className="text-sm text-gray-600">
+          Day Change: <span className={`font-semibold ${percentChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {percentChange >= 0 ? '+' : ''}{percentChange.toFixed(2)}%
+          </span>
+        </p>
+        <p className="text-xs text-gray-500">
+          Prev Close: ${previousClose.toFixed(2)}
+        </p>
+      </div>
+    );
+  };
+
+  // Fetch index chart data using API route
+  useEffect(() => {
+    if (language === 'en') {
+      const fetchIndexCharts = async () => {
+        setChartsLoading(true);
+        try {
+          // Fetch intraday data (1 day period with minute intervals) for all indices, ETFs, and leveraged ETFs
+          const [nasdaq, sp500, dow, qqq, spy, dia, qld, sso, ddm, tqqq, upro, udow, qid, sds, dow2, sqqq, spxu, sdow] = await Promise.all([
+            fetch('/api/index-chart?symbol=^NDX&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=^GSPC&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=^DJI&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=QQQ&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SPY&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=DIA&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=QLD&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SSO&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=DDM&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=TQQQ&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=UPRO&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=UDOW&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=QID&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SDS&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=DOG&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SQQQ&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SPXU&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=SDOW&period=1d&interval=1m').then(r => r.json())
+          ]);
+          
+          console.log('🔥 RAW API RESPONSE FOR NASDAQ:', JSON.stringify(nasdaq, null, 2));
+
+          // Helper function to filter to only last trading day
+          const filterLastTradingDay = (dates: string[], prices: number[], previousClose?: number) => {
+            if (!dates || !prices || dates.length === 0) return { dates: [], prices: [], previousClose };
+            
+            console.log('🔍 Raw dates sample (first 3):', dates.slice(0, 3));
+            console.log('🔍 Raw dates sample (last 3):', dates.slice(-3));
+            console.log('🔍 First date full string:', dates[0]);
+            console.log('📊 Total data points received:', dates.length);
+            console.log('📊 Previous close from API:', previousClose);
+            
+            // Parse dates as ISO timestamps and group by calendar date
+            const dateCounts: { [key: string]: { count: number, indices: number[] } } = {};
+            
+            for (let i = 0; i < dates.length; i++) {
+              const date = new Date(dates[i]);
+              // Get just the date part (YYYY-MM-DD) for grouping
+              const dateKey = date.toISOString().split('T')[0];
+              if (!dateCounts[dateKey]) {
+                dateCounts[dateKey] = { count: 0, indices: [] };
+              }
+              dateCounts[dateKey].count++;
+              dateCounts[dateKey].indices.push(i);
+            }
+            
+            // Find the date with the maximum count (most data points = most recent trading day)
+            let maxCount = 0;
+            let mostRecentDateKey = '';
+            let mostRecentIndices: number[] = [];
+            
+            // Sort dates to get the most recent one with substantial data
+            const sortedDates = Object.entries(dateCounts).sort((a, b) => b[0].localeCompare(a[0]));
+            
+            for (const [dateKey, info] of sortedDates) {
+              console.log(`📅 ${dateKey}: ${info.count} data points`);
+              // Pick the most recent date with at least 50 data points (to avoid partial days)
+              if (info.count > maxCount && info.count > 50) {
+                maxCount = info.count;
+                mostRecentDateKey = dateKey;
+                mostRecentIndices = info.indices;
+              }
+            }
+            
+            // If no date has >50 points, just pick the one with most data
+            if (maxCount === 0) {
+              for (const [dateKey, info] of sortedDates) {
+                if (info.count > maxCount) {
+                  maxCount = info.count;
+                  mostRecentDateKey = dateKey;
+                  mostRecentIndices = info.indices;
+                }
+              }
+            }
+            
+            console.log('🔍 Most recent trading day (with most data):', mostRecentDateKey, `(${maxCount} points)`);
+            
+            // Filter to only include data from the most recent trading day
+            const filteredData: { dates: string[], prices: number[], previousClose?: number } = { 
+              dates: [], 
+              prices: [], 
+              previousClose // Use the previousClose from Yahoo Finance API directly
+            };
+            
+            // Sort indices by timestamp to ensure chronological order
+            mostRecentIndices.sort((a, b) => {
+              const dateA = new Date(dates[a]).getTime();
+              const dateB = new Date(dates[b]).getTime();
+              return dateA - dateB;
+            });
+            
+            for (const idx of mostRecentIndices) {
+              filteredData.dates.push(dates[idx]);
+              filteredData.prices.push(prices[idx]);
+            }
+            
+            console.log('✅ Filtered to', filteredData.dates.length, 'data points for', mostRecentDateKey);
+            console.log('📈 First timestamp:', filteredData.dates[0]);
+            console.log('📈 Last timestamp:', filteredData.dates[filteredData.dates.length - 1]);
+            console.log('📈 Previous close:', previousClose?.toFixed(2));
+            console.log('📈 Current price:', filteredData.prices[filteredData.prices.length - 1]?.toFixed(2));
+            
+            if (previousClose && filteredData.prices[filteredData.prices.length - 1]) {
+              const dayChange = ((filteredData.prices[filteredData.prices.length - 1] - previousClose) / previousClose * 100).toFixed(2);
+              console.log('📈 Day change from previous close:', dayChange + '%');
+            }
+            
+            return filteredData;
+          };
+
+          // Process Nasdaq 100 - show only last trading day minute data
+          if (nasdaq.dates && nasdaq.prices && nasdaq.prices.length > 0) {
+            const filtered = filterLastTradingDay(nasdaq.dates, nasdaq.prices, nasdaq.previousClose);
+            if (filtered.prices.length > 0) {
+              setNasdaq100ChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'Nasdaq 100',
+                  data: filtered.prices,
+                  borderColor: 'rgb(59, 130, 246)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+
+          // Process S&P 500 - show only last trading day minute data
+          if (sp500.dates && sp500.prices && sp500.prices.length > 0) {
+            const filtered = filterLastTradingDay(sp500.dates, sp500.prices, sp500.previousClose);
+            if (filtered.prices.length > 0) {
+              setSp500ChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'S&P 500',
+                  data: filtered.prices,
+                  borderColor: 'rgb(16, 185, 129)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+
+          // Process Dow Jones - show only last trading day minute data
+          if (dow.dates && dow.prices && dow.prices.length > 0) {
+            const filtered = filterLastTradingDay(dow.dates, dow.prices, dow.previousClose);
+            if (filtered.prices.length > 0) {
+              setDowChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'Dow Jones',
+                  data: filtered.prices,
+                  borderColor: 'rgb(239, 68, 68)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process QQQ ETF - show only last trading day minute data
+          if (qqq.dates && qqq.prices && qqq.prices.length > 0) {
+            const filtered = filterLastTradingDay(qqq.dates, qqq.prices, qqq.previousClose);
+            if (filtered.prices.length > 0) {
+              setQqqChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'QQQ ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(59, 130, 246)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SPY ETF - show only last trading day minute data
+          if (spy.dates && spy.prices && spy.prices.length > 0) {
+            const filtered = filterLastTradingDay(spy.dates, spy.prices, spy.previousClose);
+            if (filtered.prices.length > 0) {
+              setSpyChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SPY ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(16, 185, 129)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process DIA ETF - show only last trading day minute data
+          if (dia.dates && dia.prices && dia.prices.length > 0) {
+            const filtered = filterLastTradingDay(dia.dates, dia.prices, dia.previousClose);
+            if (filtered.prices.length > 0) {
+              setDiaChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'DIA ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(239, 68, 68)',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process QLD 2x Leveraged ETF - show only last trading day minute data
+          if (qld.dates && qld.prices && qld.prices.length > 0) {
+            const filtered = filterLastTradingDay(qld.dates, qld.prices, qld.previousClose);
+            if (filtered.prices.length > 0) {
+              setQldChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'QLD 2x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(99, 102, 241)',
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SSO 2x Leveraged ETF - show only last trading day minute data
+          if (sso.dates && sso.prices && sso.prices.length > 0) {
+            const filtered = filterLastTradingDay(sso.dates, sso.prices, sso.previousClose);
+            if (filtered.prices.length > 0) {
+              setSsoChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SSO 2x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(34, 197, 94)',
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process DDM 2x Leveraged ETF - show only last trading day minute data
+          if (ddm.dates && ddm.prices && ddm.prices.length > 0) {
+            const filtered = filterLastTradingDay(ddm.dates, ddm.prices, ddm.previousClose);
+            if (filtered.prices.length > 0) {
+              setDdmChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'DDM 2x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(249, 115, 22)',
+                  backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process TQQQ 3x Leveraged ETF - show only last trading day minute data
+          if (tqqq.dates && tqqq.prices && tqqq.prices.length > 0) {
+            const filtered = filterLastTradingDay(tqqq.dates, tqqq.prices, tqqq.previousClose);
+            if (filtered.prices.length > 0) {
+              setTqqqChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'TQQQ 3x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(147, 51, 234)',
+                  backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process UPRO 3x Leveraged ETF - show only last trading day minute data
+          if (upro.dates && upro.prices && upro.prices.length > 0) {
+            const filtered = filterLastTradingDay(upro.dates, upro.prices, upro.previousClose);
+            if (filtered.prices.length > 0) {
+              setUproChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'UPRO 3x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(5, 150, 105)',
+                  backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process UDOW 3x Leveraged ETF - show only last trading day minute data
+          if (udow.dates && udow.prices && udow.prices.length > 0) {
+            const filtered = filterLastTradingDay(udow.dates, udow.prices, udow.previousClose);
+            if (filtered.prices.length > 0) {
+              setUdowChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'UDOW 3x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(220, 38, 38)',
+                  backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process QID -2x Inverse Leveraged ETF - show only last trading day minute data
+          if (qid.dates && qid.prices && qid.prices.length > 0) {
+            const filtered = filterLastTradingDay(qid.dates, qid.prices, qid.previousClose);
+            if (filtered.prices.length > 0) {
+              setQidChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'QID -2x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(251, 146, 60)',
+                  backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SDS -2x Inverse Leveraged ETF - show only last trading day minute data
+          if (sds.dates && sds.prices && sds.prices.length > 0) {
+            const filtered = filterLastTradingDay(sds.dates, sds.prices, sds.previousClose);
+            if (filtered.prices.length > 0) {
+              setSdsChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SDS -2x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(234, 88, 12)',
+                  backgroundColor: 'rgba(234, 88, 12, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process DOG -2x Inverse Leveraged ETF - show only last trading day minute data
+          if (dow2.dates && dow2.prices && dow2.prices.length > 0) {
+            const filtered = filterLastTradingDay(dow2.dates, dow2.prices, dow2.previousClose);
+            if (filtered.prices.length > 0) {
+              setDowChartData2({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'DOG -2x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(217, 70, 70)',
+                  backgroundColor: 'rgba(217, 70, 70, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SQQQ -3x Inverse Leveraged ETF - show only last trading day minute data
+          if (sqqq.dates && sqqq.prices && sqqq.prices.length > 0) {
+            const filtered = filterLastTradingDay(sqqq.dates, sqqq.prices, sqqq.previousClose);
+            if (filtered.prices.length > 0) {
+              setSqqqChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SQQQ -3x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(124, 58, 237)',
+                  backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SPXU -3x Inverse Leveraged ETF - show only last trading day minute data
+          if (spxu.dates && spxu.prices && spxu.prices.length > 0) {
+            const filtered = filterLastTradingDay(spxu.dates, spxu.prices, spxu.previousClose);
+            if (filtered.prices.length > 0) {
+              setSpxuChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SPXU -3x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(194, 65, 12)',
+                  backgroundColor: 'rgba(194, 65, 12, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+          
+          // Process SDOW -3x Inverse Leveraged ETF - show only last trading day minute data
+          if (sdow.dates && sdow.prices && sdow.prices.length > 0) {
+            const filtered = filterLastTradingDay(sdow.dates, sdow.prices, sdow.previousClose);
+            if (filtered.prices.length > 0) {
+              setSdowChartData({
+                labels: filtered.dates,
+                datasets: [{
+                  label: 'SDOW -3x ETF',
+                  data: filtered.prices,
+                  borderColor: 'rgb(185, 28, 28)',
+                  backgroundColor: 'rgba(185, 28, 28, 0.1)',
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  borderWidth: 2,
+                  firstValue: filtered.previousClose || filtered.prices[0]
+                }]
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching index chart data:', error);
+        } finally {
+          setChartsLoading(false);
+        }
+      };
+
+      fetchIndexCharts();
+    }
+  }, [language]);
+
   return (
     <>
       <Head>
@@ -379,15 +1017,581 @@ export default function Home() {
       </Script>
 
       {language === 'en' ? (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 flex flex-col">
           <Navigation language={language} onLanguageChange={setLanguage} />
-          <main className="py-10">
+          <main className="flex-grow py-10">
             <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-              <div className="mb-6 text-center">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Nasdaq 100 Index Constituents</h1>
-                <p className="text-gray-600 text-lg">View all Nasdaq 100 stocks with weights, last closing prices, ATH data, and key financial ratios</p>
+              <div className="mb-8 text-center">
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">US Stock Market Indices</h1>
+                <p className="text-gray-600 text-lg">Real-time overview of major US stock indices</p>
               </div>
-              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white overflow-x-auto">
+              
+              {/* Index Charts Grid */}
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Major Indices</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Nasdaq 100 */}
+                <div className="bg-white rounded-xl shadow-lg p-4">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">Nasdaq 100</h2>
+                  <div style={{ height: '300px' }}>
+                    {chartsLoading ? (
+                      <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                    ) : nasdaq100ChartData ? (
+                      <Line 
+                        data={nasdaq100ChartData} 
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              mode: 'index',
+                              intersect: false,
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.dataset.label || '';
+                                  const value = context.parsed.y;
+                                  const previousClose = context.dataset.firstValue;
+                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
+                                  return `${label}: ${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            x: { display: false },
+                            y: { 
+                              position: 'left',
+                              ticks: {
+                                callback: function(value) {
+                                  return value.toLocaleString();
+                                }
+                              }
+                            },
+                            y1: {
+                              type: 'linear' as const,
+                              position: 'right',
+                              grid: { display: false },
+                              afterDataLimits: function(axis: any) {
+                                const chart = axis.chart;
+                                const yAxis = chart.scales.y;
+                                axis.min = yAxis.min;
+                                axis.max = yAxis.max;
+                              },
+                              ticks: {
+                                callback: function(value) {
+                                  const chart = (this as any).chart;
+                                  const previousClose = chart.data.datasets[0].firstValue;
+                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(1);
+                                  return percentChange + '%';
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                    )}
+                  </div>
+                  <div className="mt-4 text-center">
+                    {nasdaq100ChartData && nasdaq100ChartData.datasets[0].data.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600">
+                          Latest: <span className="font-semibold">{nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1].toLocaleString()}</span>
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Day Change: <span className={`font-semibold ${((nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1] - nasdaq100ChartData.datasets[0].firstValue) / nasdaq100ChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {((nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1] - nasdaq100ChartData.datasets[0].firstValue) / nasdaq100ChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((nasdaq100ChartData.datasets[0].data[nasdaq100ChartData.datasets[0].data.length - 1] - nasdaq100ChartData.datasets[0].firstValue) / nasdaq100ChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Prev Close: {nasdaq100ChartData.datasets[0].firstValue.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    <Link href="/nasdaq100" className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+
+                {/* S&P 500 */}
+                <div className="bg-white rounded-xl shadow-lg p-4">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">S&P 500</h2>
+                  <div style={{ height: '300px' }}>
+                    {chartsLoading ? (
+                      <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                    ) : sp500ChartData ? (
+                      <Line 
+                        data={sp500ChartData} 
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              mode: 'index',
+                              intersect: false,
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.dataset.label || '';
+                                  const value = context.parsed.y;
+                                  const previousClose = context.dataset.firstValue;
+                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
+                                  return `${label}: ${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            x: { display: false },
+                            y: { 
+                              position: 'left',
+                              ticks: {
+                                callback: function(value) {
+                                  return value.toLocaleString();
+                                }
+                              }
+                            },
+                            y1: {
+                              type: 'linear' as const,
+                              position: 'right',
+                              grid: { display: false },
+                              afterDataLimits: function(axis: any) {
+                                const chart = axis.chart;
+                                const yAxis = chart.scales.y;
+                                axis.min = yAxis.min;
+                                axis.max = yAxis.max;
+                              },
+                              ticks: {
+                                callback: function(value) {
+                                  const chart = (this as any).chart;
+                                  const previousClose = chart.data.datasets[0].firstValue;
+                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(1);
+                                  return percentChange + '%';
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                    )}
+                  </div>
+                  <div className="mt-4 text-center">
+                    {sp500ChartData && sp500ChartData.datasets[0].data.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600">
+                          Latest: <span className="font-semibold">{sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1].toLocaleString()}</span>
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Day Change: <span className={`font-semibold ${((sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1] - sp500ChartData.datasets[0].firstValue) / sp500ChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {((sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1] - sp500ChartData.datasets[0].firstValue) / sp500ChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((sp500ChartData.datasets[0].data[sp500ChartData.datasets[0].data.length - 1] - sp500ChartData.datasets[0].firstValue) / sp500ChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Prev Close: {sp500ChartData.datasets[0].firstValue.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    <Link href="/sp500" className="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Dow Jones */}
+                <div className="bg-white rounded-xl shadow-lg p-4">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">Dow Jones</h2>
+                  <div style={{ height: '300px' }}>
+                    {chartsLoading ? (
+                      <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                    ) : dowChartData ? (
+                      <Line 
+                        data={dowChartData} 
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                              mode: 'index',
+                              intersect: false,
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.dataset.label || '';
+                                  const value = context.parsed.y;
+                                  const previousClose = context.dataset.firstValue;
+                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
+                                  return `${label}: ${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+                                }
+                              }
+                            }
+                          },
+                          scales: {
+                            x: { display: false },
+                            y: { 
+                              position: 'left',
+                              ticks: {
+                                callback: function(value) {
+                                  return value.toLocaleString();
+                                }
+                              }
+                            },
+                            y1: {
+                              type: 'linear' as const,
+                              position: 'right',
+                              grid: { display: false },
+                              afterDataLimits: function(axis: any) {
+                                const chart = axis.chart;
+                                const yAxis = chart.scales.y;
+                                axis.min = yAxis.min;
+                                axis.max = yAxis.max;
+                              },
+                              ticks: {
+                                callback: function(value) {
+                                  const chart = (this as any).chart;
+                                  const previousClose = chart.data.datasets[0].firstValue;
+                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(1);
+                                  return percentChange + '%';
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                    )}
+                  </div>
+                  <div className="mt-4 text-center">
+                    {dowChartData && dowChartData.datasets[0].data.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600">
+                          Latest: <span className="font-semibold">{dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1].toLocaleString()}</span>
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Day Change: <span className={`font-semibold ${((dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1] - dowChartData.datasets[0].firstValue) / dowChartData.datasets[0].firstValue * 100) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {((dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1] - dowChartData.datasets[0].firstValue) / dowChartData.datasets[0].firstValue * 100) >= 0 ? '+' : ''}{((dowChartData.datasets[0].data[dowChartData.datasets[0].data.length - 1] - dowChartData.datasets[0].firstValue) / dowChartData.datasets[0].firstValue * 100).toFixed(2)}%
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Prev Close: {dowChartData.datasets[0].firstValue.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    <Link href="/dow" className="inline-block bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+              </div>
+              </div>
+
+              {/* ETF Charts Grid */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Index Tracking ETFs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* QQQ ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">QQQ ETF</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : qqqChartData ? (
+                        <Line data={qqqChartData} options={getETFChartOptions('QQQ', qqqChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(qqqChartData, 'QQQ')}
+                      <p className="text-sm text-gray-600">Tracks Nasdaq 100 Index</p>
+                    </div>
+                  </div>
+
+                  {/* SPY ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SPY ETF</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : spyChartData ? (
+                        <Line data={spyChartData} options={getETFChartOptions('SPY', spyChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(spyChartData, 'SPY')}
+                      <p className="text-sm text-gray-600">Tracks S&P 500 Index</p>
+                    </div>
+                  </div>
+
+                  {/* DIA ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">DIA ETF</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : diaChartData ? (
+                        <Line data={diaChartData} options={getETFChartOptions('DIA', diaChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(diaChartData, 'DIA')}
+                      <p className="text-sm text-gray-600">Tracks Dow Jones Index</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2x Leveraged ETF Charts Grid */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">2x Leveraged ETFs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* QLD 2x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">QLD (2x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : qldChartData ? (
+                        <Line data={qldChartData} options={getETFChartOptions('QLD', qldChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(qldChartData, 'QLD')}
+                      <p className="text-sm text-gray-600">2x Nasdaq 100</p>
+                    </div>
+                  </div>
+
+                  {/* SSO 2x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SSO (2x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : ssoChartData ? (
+                        <Line data={ssoChartData} options={getETFChartOptions('SSO', ssoChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(ssoChartData, 'SSO')}
+                      <p className="text-sm text-gray-600">2x S&P 500</p>
+                    </div>
+                  </div>
+
+                  {/* DDM 2x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">DDM (2x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : ddmChartData ? (
+                        <Line data={ddmChartData} options={getETFChartOptions('DDM', ddmChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(ddmChartData, 'DDM')}
+                      <p className="text-sm text-gray-600">2x Dow Jones</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3x Leveraged ETF Charts Grid */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">3x Leveraged ETFs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* TQQQ 3x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">TQQQ (3x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : tqqqChartData ? (
+                        <Line data={tqqqChartData} options={getETFChartOptions('TQQQ', tqqqChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(tqqqChartData, 'TQQQ')}
+                      <p className="text-sm text-gray-600">3x Nasdaq 100</p>
+                    </div>
+                  </div>
+
+                  {/* UPRO 3x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">UPRO (3x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : uproChartData ? (
+                        <Line data={uproChartData} options={getETFChartOptions('UPRO', uproChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(uproChartData, 'UPRO')}
+                      <p className="text-sm text-gray-600">3x S&P 500</p>
+                    </div>
+                  </div>
+
+                  {/* UDOW 3x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">UDOW (3x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : udowChartData ? (
+                        <Line data={udowChartData} options={getETFChartOptions('UDOW', udowChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(udowChartData, 'UDOW')}
+                      <p className="text-sm text-gray-600">3x Dow Jones</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* -2x Inverse Leveraged ETF Charts Grid */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">-2x Inverse Leveraged ETFs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* QID -2x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">QID (-2x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : qidChartData ? (
+                        <Line data={qidChartData} options={getETFChartOptions('QID', qidChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(qidChartData, 'QID')}
+                      <p className="text-sm text-gray-600">-2x Nasdaq 100 (Short)</p>
+                    </div>
+                  </div>
+
+                  {/* SDS -2x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SDS (-2x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : sdsChartData ? (
+                        <Line data={sdsChartData} options={getETFChartOptions('SDS', sdsChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(sdsChartData, 'SDS')}
+                      <p className="text-sm text-gray-600">-2x S&P 500 (Short)</p>
+                    </div>
+                  </div>
+
+                  {/* DOG -2x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">DOG (-2x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : dowChartData2 ? (
+                        <Line data={dowChartData2} options={getETFChartOptions('DOG', dowChartData2.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(dowChartData2, 'DOG')}
+                      <p className="text-sm text-gray-600">-2x Dow Jones (Short)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* -3x Inverse Leveraged ETF Charts Grid */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">-3x Inverse Leveraged ETFs</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* SQQQ -3x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SQQQ (-3x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : sqqqChartData ? (
+                        <Line data={sqqqChartData} options={getETFChartOptions('SQQQ', sqqqChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(sqqqChartData, 'SQQQ')}
+                      <p className="text-sm text-gray-600">-3x Nasdaq 100 (Short)</p>
+                    </div>
+                  </div>
+
+                  {/* SPXU -3x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SPXU (-3x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : spxuChartData ? (
+                        <Line data={spxuChartData} options={getETFChartOptions('SPXU', spxuChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(spxuChartData, 'SPXU')}
+                      <p className="text-sm text-gray-600">-3x S&P 500 (Short)</p>
+                    </div>
+                  </div>
+
+                  {/* SDOW -3x ETF */}
+                  <div className="bg-white rounded-xl shadow-lg p-4">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">SDOW (-3x)</h2>
+                    <div style={{ height: '300px' }}>
+                      {chartsLoading ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
+                      ) : sdowChartData ? (
+                        <Line data={sdowChartData} options={getETFChartOptions('SDOW', sdowChartData.datasets[0].firstValue)} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
+                      )}
+                    </div>
+                    <div className="mt-4 text-center">
+                      {renderETFDataDisplay(sdowChartData, 'SDOW')}
+                      <p className="text-sm text-gray-600">-3x Dow Jones (Short)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hidden table container for compatibility */}
+              <TableContainer component={Paper} className="rounded-xl shadow-lg bg-white overflow-x-auto" style={{ display: 'none' }}>
                 <Table size="small" sx={{ minWidth: { xs: 320, sm: 650 } }}>
                   <TableHead>
                     <TableRow className="bg-gray-50 text-gray-600" sx={{ height: { xs: 28, sm: 32 } }}>
@@ -482,9 +1686,10 @@ export default function Home() {
               </TableContainer>
             </div>
           </main>
+          <Footer language={language} />
         </div>
       ) : (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-0">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-0 flex flex-col">
           <Navigation 
             language={language} 
             onLanguageChange={setLanguage} 
@@ -712,6 +1917,7 @@ export default function Home() {
               </div>
             )}
           </div>
+          <Footer language={language} />
         </div>
       )}
 
