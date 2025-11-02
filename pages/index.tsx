@@ -434,8 +434,9 @@ export default function Home() {
         callbacks: {
           label: function(context: any) {
             const value = context.parsed.y;
-            const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
-            return `${label}: $${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+            const percentChangeValue = ((value - previousClose) / previousClose * 100);
+            const percentChange = percentChangeValue.toFixed(2);
+            return `${label}: $${value.toLocaleString()} (${percentChangeValue > 0 ? '+' : ''}${percentChange}%)`;
           }
         }
       }
@@ -505,7 +506,7 @@ export default function Home() {
         setChartsLoading(true);
         try {
           // Fetch intraday data (1 day period with minute intervals) for all indices, ETFs, and leveraged ETFs
-          const [nasdaq, sp500, dow, qqq, spy, dia, qld, sso, ddm, tqqq, upro, udow, psq, sh, dog, qid, sds, dow2, sqqq, spxu, sdow] = await Promise.all([
+          const [nasdaq, sp500, dow, qqq, spy, dia, qld, sso, ddm, tqqq, upro, udow, psq, sh, dog, qid, sds, dxd, sqqq, spxu, sdow] = await Promise.all([
             fetch('/api/index-chart?symbol=^NDX&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=^GSPC&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=^DJI&period=1d&interval=1m').then(r => r.json()),
@@ -523,7 +524,7 @@ export default function Home() {
             fetch('/api/index-chart?symbol=DOG&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=QID&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=SDS&period=1d&interval=1m').then(r => r.json()),
-            fetch('/api/index-chart?symbol=DOG&period=1d&interval=1m').then(r => r.json()),
+            fetch('/api/index-chart?symbol=DXD&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=SQQQ&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=SPXU&period=1d&interval=1m').then(r => r.json()),
             fetch('/api/index-chart?symbol=SDOW&period=1d&interval=1m').then(r => r.json())
@@ -977,13 +978,13 @@ export default function Home() {
           }
           
           // Process DOG -2x Inverse Leveraged ETF - show only last trading day minute data
-          if (dow2.dates && dow2.prices && dow2.prices.length > 0) {
-            const filtered = filterLastTradingDay(dow2.dates, dow2.prices, dow2.previousClose);
+          if (dxd.dates && dxd.prices && dxd.prices.length > 0) {
+            const filtered = filterLastTradingDay(dxd.dates, dxd.prices, dxd.previousClose);
             if (filtered.prices.length > 0) {
               setDowChartData2({
                 labels: filtered.dates,
                 datasets: [{
-                  label: 'DOG -2x ETF',
+                  label: 'DXD -2x ETF',
                   data: filtered.prices,
                   borderColor: 'rgb(217, 70, 70)',
                   backgroundColor: 'rgba(217, 70, 70, 0.1)',
@@ -1100,29 +1101,34 @@ export default function Home() {
                 <p className="text-gray-600 text-lg">Real-time overview of major US stock indices</p>
               </div>
               
-              {/* View Mode Toggle */}
-              <div className="mb-6 flex justify-end items-center gap-3">
-                <span className="text-sm text-gray-600">View:</span>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    viewMode === 'grid'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Grid
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    viewMode === 'table'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  Table
-                </button>
+              {/* View Mode Toggle and Mag7 Link */}
+              <div className="mb-6 flex justify-between items-center gap-3">
+                <Link href="/mag7" className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition">
+                  View Magnificent 7 →
+                </Link>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">View:</span>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      viewMode === 'grid'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Grid
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                      viewMode === 'table'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Table
+                  </button>
+                </div>
               </div>
               
               {viewMode === 'grid' ? (
@@ -1149,12 +1155,13 @@ export default function Home() {
                               mode: 'index',
                               intersect: false,
                               callbacks: {
-                                label: function(context) {
+                                label: function(context: any) {
                                   const label = context.dataset.label || '';
                                   const value = context.parsed.y;
                                   const previousClose = context.dataset.firstValue;
-                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
-                                  return `${label}: ${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+                                  const percentChangeValue = ((value - previousClose) / previousClose * 100);
+                                  const percentChange = percentChangeValue.toFixed(2);
+                                  return `${label}: ${value.toLocaleString()} (${percentChangeValue > 0 ? '+' : ''}${percentChange}%)`;
                                 }
                               }
                             }
@@ -1180,7 +1187,7 @@ export default function Home() {
                                 axis.max = yAxis.max;
                               },
                               ticks: {
-                                callback: function(value) {
+                                callback: function(value: any) {
                                   const chart = (this as any).chart;
                                   const previousClose = chart.data.datasets[0].firstValue;
                                   const percentChange = ((value - previousClose) / previousClose * 100).toFixed(1);
@@ -1235,12 +1242,13 @@ export default function Home() {
                               mode: 'index',
                               intersect: false,
                               callbacks: {
-                                label: function(context) {
+                                label: function(context: any) {
                                   const label = context.dataset.label || '';
                                   const value = context.parsed.y;
                                   const previousClose = context.dataset.firstValue;
-                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
-                                  return `${label}: ${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+                                  const percentChangeValue = ((value - previousClose) / previousClose * 100);
+                                  const percentChange = percentChangeValue.toFixed(2);
+                                  return `${label}: ${value.toLocaleString()} (${percentChangeValue > 0 ? '+' : ''}${percentChange}%)`;
                                 }
                               }
                             }
@@ -1266,7 +1274,7 @@ export default function Home() {
                                 axis.max = yAxis.max;
                               },
                               ticks: {
-                                callback: function(value) {
+                                callback: function(value: any) {
                                   const chart = (this as any).chart;
                                   const previousClose = chart.data.datasets[0].firstValue;
                                   const percentChange = ((value - previousClose) / previousClose * 100).toFixed(1);
@@ -1321,12 +1329,13 @@ export default function Home() {
                               mode: 'index',
                               intersect: false,
                               callbacks: {
-                                label: function(context) {
+                                label: function(context: any) {
                                   const label = context.dataset.label || '';
                                   const value = context.parsed.y;
                                   const previousClose = context.dataset.firstValue;
-                                  const percentChange = ((value - previousClose) / previousClose * 100).toFixed(2);
-                                  return `${label}: ${value.toLocaleString()} (${percentChange > 0 ? '+' : ''}${percentChange}%)`;
+                                  const percentChangeValue = ((value - previousClose) / previousClose * 100);
+                                  const percentChange = percentChangeValue.toFixed(2);
+                                  return `${label}: ${value.toLocaleString()} (${percentChangeValue > 0 ? '+' : ''}${percentChange}%)`;
                                 }
                               }
                             }
@@ -1352,7 +1361,7 @@ export default function Home() {
                                 axis.max = yAxis.max;
                               },
                               ticks: {
-                                callback: function(value) {
+                                callback: function(value: any) {
                                   const chart = (this as any).chart;
                                   const previousClose = chart.data.datasets[0].firstValue;
                                   const percentChange = ((value - previousClose) / previousClose * 100).toFixed(1);
@@ -1673,18 +1682,18 @@ export default function Home() {
 
                   {/* DOG -2x ETF */}
                   <div className="bg-white rounded-xl shadow-lg p-4">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">DOG (-2x)</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-4 text-center">DXD (-2x)</h2>
                     <div style={{ height: '300px' }}>
                       {chartsLoading ? (
                         <div className="flex items-center justify-center h-full text-gray-500">Loading...</div>
                       ) : dowChartData2 ? (
-                        <Line data={dowChartData2} options={getETFChartOptions('DOG', dowChartData2.datasets[0].firstValue)} />
+                        <Line data={dowChartData2} options={getETFChartOptions('DXD', dowChartData2.datasets[0].firstValue)} />
                       ) : (
                         <div className="flex items-center justify-center h-full text-gray-500">No data available</div>
                       )}
                     </div>
                     <div className="mt-4 text-center">
-                      {renderETFDataDisplay(dowChartData2, 'DOG')}
+                      {renderETFDataDisplay(dowChartData2, 'DXD')}
                       <p className="text-sm text-gray-600">-2x Dow Jones (Short)</p>
                     </div>
                   </div>
@@ -2039,10 +2048,10 @@ export default function Home() {
                               </td>
                             </tr>
                           )}
-                          {/* DOG -2x */}
+                          {/* DXD -2x */}
                           {dowChartData2 && dowChartData2.datasets[0].data.length > 0 && (
                             <tr className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DOG</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DXD</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">-2x</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">${dowChartData2.datasets[0].firstValue.toFixed(2)}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">${dowChartData2.datasets[0].data[dowChartData2.datasets[0].data.length - 1].toFixed(2)}</td>
