@@ -1,5 +1,6 @@
 node_modules
 .env
+.env.local
 .next
 .DS_Store
 note.txt
@@ -18,3 +19,9 @@ quota.json
 # Other build artifacts
 /.next/
 /out/
+
+.log
+/backend/*.log
+
+# Python venv
+/backend/letf

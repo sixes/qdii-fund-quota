@@ -2,13 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 
-// Configure AWS SDK v3
+// Configure AWS SDK v3 - uses default credential chain
 const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
+  region: process.env.AWS_REGION || 'us-east-1'
 });
 
 const TABLE_NAME = 'index-constituents';
