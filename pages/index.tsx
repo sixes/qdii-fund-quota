@@ -70,7 +70,7 @@ export default function Home() {
   const [rowsPerPage] = useState(20);
 
   // Prominent issuers for quick filter
-  const prominentIssuers = ['Direxion', 'ProShares', 'Leveraged Shares', 'GraniteShares'];
+  const prominentIssuers = ['Direxion', 'ProShares', 'GraniteShares'];
 
   // Refs for dual scrollbar sync
   const topScrollRef = useRef<HTMLDivElement>(null);
@@ -237,7 +237,7 @@ export default function Home() {
   const translations = {
     en: {
       title: 'Leveraged ETF Performance Tracker',
-      description: 'Track performance of leveraged ETFs with real-time data',
+      description: 'Track performance of leveraged ETFs',
       overview: 'Leverage Overview',
       leverageType: 'Leverage Type',
       etfCount: 'ETF Count',
