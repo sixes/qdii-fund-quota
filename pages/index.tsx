@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Navigation from '../components/Navigation';
@@ -158,7 +159,7 @@ export default function Home() {
       try {
         // Smart limit: initial "all" view shows top 200, filtered views show more
         const isAllFilter = selectedLeverage === 'all' && selectedIssuer === 'all';
-        const fetchLimit = isAllFilter ? '200' : '5000';
+        const fetchLimit = isAllFilter ? '5000' : '5000';
 
         console.log(`📊 Fetching ${fetchLimit} ETFs with filters:`, {
           leverage: selectedLeverage,
@@ -262,6 +263,8 @@ export default function Home() {
       high52: '52W High',
       low52: '52W Low',
       loading: 'Loading...',
+      exportExcel: 'Export to Excel',
+      exportCSV: 'Export to CSV',
     },
     zh: {
       title: '杠杆ETF表现追踪器',
@@ -290,10 +293,116 @@ export default function Home() {
       high52: '52周高',
       low52: '52周低',
       loading: '加载中...',
+      exportExcel: '导出到Excel',
+      exportCSV: '导出到CSV',
     },
   };
 
   const t = translations[language];
+
+  const handleExport = (format: 'excel' | 'csv') => {
+    const dataToExport = allEtfData;
+
+    if (format === 'csv') {
+      // Create CSV content
+      const headers = [
+        'Ticker',
+        'Leverage Type',
+        'Issuer',
+        'Assets',
+        'Asset Class',
+        'Expense Ratio',
+        'Price',
+        'Volume',
+        '1 Week',
+        '1 Month',
+        '6 Month',
+        'YTD',
+        '1 Year',
+        '3 Year',
+        '5 Year',
+        '10 Year',
+        '52W High',
+        '52W Low',
+        'All Time High',
+        'ATH Change',
+        'ATH Date',
+        'All Time Low',
+        'ATL Change',
+        'ATL Date'
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        ...dataToExport.map(etf => [
+          etf.ticker,
+          etf.etfLeverage,
+          etf.issuer,
+          etf.assets,
+          etf.assetClass || '',
+          etf.expenseRatio || '',
+          etf.close || '',
+          etf.volume || '',
+          etf.ch1w || '',
+          etf.ch1m || '',
+          etf.ch6m || '',
+          etf.chYTD || '',
+          etf.ch1y || '',
+          etf.ch3y || '',
+          etf.ch5y || '',
+          etf.ch10y || '',
+          etf.high52 || '',
+          etf.low52 || '',
+          etf.allTimeHigh || '',
+          etf.allTimeHighChange || '',
+          etf.allTimeHighDate || '',
+          etf.allTimeLow || '',
+          etf.allTimeLowChange || '',
+          etf.allTimeLowDate || ''
+        ].join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: format === 'csv' ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `leveraged-etfs-${new Date().toISOString().split('T')[0]}.${format}`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } else {
+      // For Excel, use the xlsx library to create proper Excel file
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport.map(etf => ({
+            'Ticker': etf.ticker,
+            'Leverage Type': etf.etfLeverage,
+            'Issuer': etf.issuer,
+            'Assets': etf.assets,
+            'Asset Class': etf.assetClass || '',
+            'Expense Ratio': etf.expenseRatio || '',
+            'Price': etf.close || '',
+            'Volume': etf.volume || '',
+            '1 Week': etf.ch1w || '',
+            '1 Month': etf.ch1m || '',
+            '6 Month': etf.ch6m || '',
+            'YTD': etf.chYTD || '',
+            '1 Year': etf.ch1y || '',
+            '3 Year': etf.ch3y || '',
+            '5 Year': etf.ch5y || '',
+            '10 Year': etf.ch10y || '',
+            '52W High': etf.high52 || '',
+            '52W Low': etf.low52 || '',
+            'All Time High': etf.allTimeHigh || '',
+            'ATH Change': etf.allTimeHighChange || '',
+            'ATH Date': etf.allTimeHighDate || '',
+            'All Time Low': etf.allTimeLow || '',
+            'ATL Change': etf.allTimeLowChange || '',
+            'ATL Date': etf.allTimeLowDate || ''
+          })));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Leveraged ETFs');
+      XLSX.writeFile(workbook, `leveraged-etfs-${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+  };
 
   return (
     <>
@@ -418,8 +527,26 @@ export default function Home() {
             )}
           </div>
 
-          {/* ETF Table */}
+          {/* ETF Table Header with Export Buttons */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            {/* Export Buttons */}
+            <div className="flex justify-end p-4 border-b border-gray-200">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleExport('excel')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  {t.exportExcel}
+                </button>
+                <button
+                  onClick={() => handleExport('csv')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  {t.exportCSV}
+                </button>
+              </div>
+            </div>
+
             {/* Top Scrollbar */}
             <div
               ref={topScrollRef}
@@ -711,6 +838,7 @@ export default function Home() {
               </Table>
             </TableContainer>
           </div>
+
 
           {/* Pagination and Results */}
           {!loading && allEtfData.length > 0 && (
