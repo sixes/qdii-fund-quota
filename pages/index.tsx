@@ -40,6 +40,7 @@ interface ETF {
   allTimeLow: number | null;
   allTimeLowChange: number | null;
   allTimeLowDate: string | null;
+  etfIndex: string | null;
 }
 
 interface LeverageSummary {
@@ -597,6 +598,15 @@ export default function Home() {
                         <span className="font-semibold">{t.issuer}</span>
                       </TableSortLabel>
                     </TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sortKey === 'etfIndex'}
+                        direction={sortKey === 'etfIndex' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('etfIndex')}
+                      >
+                        <span className="font-semibold">{language === 'en' ? 'Index' : '指数'}</span>
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell align="right">
                       <TableSortLabel
                         active={sortKey === 'assets'}
@@ -810,6 +820,7 @@ export default function Home() {
                           </span>
                         </TableCell>
                         <TableCell>{etf.issuer}</TableCell>
+                        <TableCell>{etf.etfIndex || '-'}</TableCell>
                         <TableCell align="right">{formatAssets(etf.assets)}</TableCell>
                         <TableCell>{etf.assetClass || '-'}</TableCell>
                         <TableCell align="right">{etf.expenseRatio ? `${etf.expenseRatio}%` : '-'}</TableCell>

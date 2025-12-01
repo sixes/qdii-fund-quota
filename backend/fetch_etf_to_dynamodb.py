@@ -17,7 +17,7 @@ import requests
 from botocore.exceptions import ClientError
 
 # Configuration
-API_URL = "https://stockanalysis.com/api/screener/e/bd/etfLeverage+issuer+assets+assetClass+expenseRatio+peRatio+close+volume+ch1w+ch1m+ch6m+chYTD+ch1y+ch3y+ch5y+ch10y+high52+low52+allTimeLow+allTimeLowChange+allTimeHigh+allTimeHighDate+allTimeHighChange+allTimeLowDate.json"
+API_URL = "https://stockanalysis.com/api/screener/e/bd/etfLeverage+issuer+aum+etfIndex+assetClass+expenseRatio+peRatio+price+volume+ch1w+ch1m+ch6m+chYTD+ch1y+ch3y+ch5y+ch10y+high52+low52+allTimeLow+allTimeLowChange+allTimeHigh+allTimeHighDate+allTimeHighChange+allTimeLowDate.json"
 TABLE_NAME = "ETFData"
 REGION_NAME = "us-east-1"  # Change to your preferred region
 HEALTHCHECK_URL = "https://hc-ping.com/f626df6e-552b-46a7-8ebf-f23865a042c4"

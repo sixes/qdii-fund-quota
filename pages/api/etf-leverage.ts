@@ -73,11 +73,11 @@ function processETFData(items: any[]): any[] {
       ticker: item.ticker,
       etfLeverage: item.etfLeverage,
       issuer: item.issuer,
-      assets: item.assets ? Number(item.assets) : 0,
+      assets: item.aum ? Number(item.aum) : 0,
       assetClass: item.assetClass,
       expenseRatio: item.expenseRatio ? Number(item.expenseRatio) : null,
       peRatio: item.peRatio ? Number(item.peRatio) : null,
-      close: item.close ? Number(item.close) : null,
+      close: item.price ? Number(item.price) : null,
       volume: item.volume ? Number(item.volume) : null,
       ch1w: item.ch1w ? Number(item.ch1w) : null,
       ch1m: item.ch1m ? Number(item.ch1m) : null,
@@ -96,6 +96,7 @@ function processETFData(items: any[]): any[] {
       allTimeHighChange: item.allTimeHighChange ? Number(item.allTimeHighChange) : null,
       allTimeLowDate: item.allTimeLowDate,
       lastUpdated: item.lastUpdated,
+      etfIndex: item.etfIndex || null,
     }
   })
 }
