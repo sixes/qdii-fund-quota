@@ -472,81 +472,81 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="mb-4 flex flex-wrap gap-3 items-center">
-            {selectedLeverage !== 'all' && (
-              <button
-                onClick={() => setSelectedLeverage('all')}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
-              >
-                {t.allETFs}
-              </button>
-            )}
+          {/* Filters and Export Buttons */}
+          <div className="mb-4 flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex flex-wrap gap-3 items-center">
+              {selectedLeverage !== 'all' && (
+                <button
+                  onClick={() => setSelectedLeverage('all')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                >
+                  {t.allETFs}
+                </button>
+              )}
 
-            {/* Issuer Filter */}
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                {language === 'en' ? 'Issuer:' : '发行商:'}
-              </label>
-              <select
-                value={selectedIssuer}
-                onChange={(e) => setSelectedIssuer(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">{language === 'en' ? 'All Issuers' : '所有发行商'}</option>
-                {issuers.map((issuer) => (
-                  <option key={issuer} value={issuer}>
-                    {issuer}
-                  </option>
-                ))}
-              </select>
+              {/* Issuer Filter */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">
+                  {language === 'en' ? 'Issuer:' : '发行商:'}
+                </label>
+                <select
+                  value={selectedIssuer}
+                  onChange={(e) => setSelectedIssuer(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">{language === 'en' ? 'All Issuers' : '所有发行商'}</option>
+                  {issuers.map((issuer) => (
+                    <option key={issuer} value={issuer}>
+                      {issuer}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Prominent Issuer Quick Filter Buttons */}
+              {prominentIssuers.map((issuer) => (
+                <button
+                  key={issuer}
+                  onClick={() => setSelectedIssuer(issuer)}
+                  className={`px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                    selectedIssuer === issuer
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {issuer}
+                </button>
+              ))}
+
+              {selectedIssuer !== 'all' && (
+                <button
+                  onClick={() => setSelectedIssuer('all')}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  {language === 'en' ? 'Clear filter' : '清除筛选'}
+                </button>
+              )}
             </div>
 
-            {/* Prominent Issuer Quick Filter Buttons */}
-            {prominentIssuers.map((issuer) => (
+            {/* Export Buttons */}
+            <div className="flex gap-2">
               <button
-                key={issuer}
-                onClick={() => setSelectedIssuer(issuer)}
-                className={`px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  selectedIssuer === issuer
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handleExport('excel')}
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
               >
-                {issuer}
+                {t.exportExcel}
               </button>
-            ))}
-
-            {selectedIssuer !== 'all' && (
               <button
-                onClick={() => setSelectedIssuer('all')}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                onClick={() => handleExport('csv')}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
               >
-                {language === 'en' ? 'Clear filter' : '清除筛选'}
+                {t.exportCSV}
               </button>
-            )}
+            </div>
           </div>
 
           {/* ETF Table Header with Export Buttons */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            {/* Export Buttons */}
-            <div className="flex justify-end p-4 border-b border-gray-200">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleExport('excel')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  {t.exportExcel}
-                </button>
-                <button
-                  onClick={() => handleExport('csv')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
-                  {t.exportCSV}
-                </button>
-              </div>
-            </div>
-
             {/* Top Scrollbar */}
             <div
               ref={topScrollRef}
