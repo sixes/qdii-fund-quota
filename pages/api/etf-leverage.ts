@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const data = await client.send(new QueryCommand(params))
+      console.log(data.Items.length)
       let etfs = processETFData(data.Items || [])
 
       // Filter by issuer if specified
@@ -38,13 +39,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         data: limited,
       })
     } else {
-      // Scan entire table (for 'all' or no filter)
+      // Scan entire table (for 'all' or no filter) with pagination
       params = {
         TableName: 'ETFData',
       }
 
-      const data = await client.send(new ScanCommand(params))
-      let etfs = processETFData(data.Items || [])
+      let allItems: any[] = []
+      let lastEvaluatedKey: any = undefined
+
+      do {
+        if (lastEvaluatedKey) {
+          params.ExclusiveStartKey = lastEvaluatedKey
+        }
+        const data = await client.send(new ScanCommand(params))
+        allItems.push(...(data.Items || []))
+        lastEvaluatedKey = data.LastEvaluatedKey
+      } while (lastEvaluatedKey)
+
+      console.log('api return etf count', allItems.length)
+      let etfs = processETFData(allItems)
 
       // Filter by issuer if specified
       if (issuer && issuer !== 'all') {

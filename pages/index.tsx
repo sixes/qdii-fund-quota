@@ -65,7 +65,7 @@ export default function Home() {
   const [allEtfData, setAllEtfData] = useState<ETF[]>([]);
   const [summaryData, setSummaryData] = useState<LeverageSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<string>('assets');
+  const [sortKey, setSortKey] = useState<string>('chYTD');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [openMenu, setOpenMenu] = useState<null | 'nasdaq100' | 'sp500' | 'dow'>(null);
   const [page, setPage] = useState(1);
@@ -551,40 +551,45 @@ export default function Home() {
               )}
             </div>
 
-            {/* Export Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleExport('excel')}
-                className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
-              >
-                {t.exportExcel}
-              </button>
-              <button
-                onClick={() => handleExport('csv')}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md"
-              >
-                {t.exportCSV}
-              </button>
-            </div>
           </div>
 
-          {/* Search Box */}
-          <div className="mb-4">
-            <div className="relative max-w-md">
-              <input
-                type="text"
-                placeholder={language === 'en' ? 'Search ticker, issuer, index...' : '搜索代码、发行商、指数...'}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-            </div>
-            </div>
+<div className="mb-4">
+  <div className="flex flex-wrap items-center gap-4">
+    {/* Search Input */}
+    <div className="relative flex-1 min-w-0 max-w-md ">
+      <input
+        type="text"
+        placeholder={language === 'en' ? 'Search ticker, issuer, index...' : '搜索代码、发行商、指数...'}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </div>
+
+<div className="flex-1" />
+
+    {/* Export Buttons */}
+    <div className="flex gap-3 ">
+      <button
+        onClick={() => handleExport('excel')}
+        className="px-5 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md whitespace-nowrap"
+      >
+        {t.exportExcel}
+      </button>
+      <button
+        onClick={() => handleExport('csv')}
+        className="px-5 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow-md whitespace-nowrap"
+      >
+        {t.exportCSV}
+      </button>
+    </div>
+  </div>
+</div>
 
             {/* ETF Table Header with Export Buttons */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
