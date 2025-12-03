@@ -70,9 +70,11 @@ export default function Home() {
   const [openMenu, setOpenMenu] = useState<null | 'nasdaq100' | 'sp500' | 'dow'>(null);
   const [page, setPage] = useState(1);
   const [rowsPerPage] = useState(20);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filteredCount, setFilteredCount] = useState(0);
 
   // Prominent issuers for quick filter
-  const prominentIssuers = ['Direxion', 'ProShares', 'GraniteShares'];
+  const prominentIssuers = ['Direxion', 'ProShares', 'GraniteShares', 'BlackRock', 'Vanguard', 'State Street', 'Invesco', 'Charles Schwab', 'JPMorgan Chase'];
 
   // Refs for dual scrollbar sync
   const topScrollRef = useRef<HTMLDivElement>(null);
@@ -199,15 +201,35 @@ export default function Home() {
     fetchETFs();
   }, [selectedLeverage, selectedIssuer, sortKey, sortDirection]);
 
-  // Paginate data
+  // Filter and paginate data
   useEffect(() => {
-    console.time('  ⏱️ Paginate data');
+    console.time('  ⏱️ Filter and paginate data');
+    
+    // Filter data based on search term
+    let filteredData = allEtfData;
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filteredData = allEtfData.filter(etf =>
+        etf.ticker.toLowerCase().includes(searchLower) ||
+        etf.issuer.toLowerCase().includes(searchLower) ||
+        (etf.etfIndex && etf.etfIndex.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    setFilteredCount(filteredData.length);
+    
+    // Paginate filtered data
     const startIndex = (page - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    setEtfData(allEtfData.slice(startIndex, endIndex));
-    console.log(`📄 Page ${page}: Showing ${startIndex + 1}-${Math.min(endIndex, allEtfData.length)} of ${allEtfData.length} ETFs`);
-    console.timeEnd('  ⏱️ Paginate data');
-  }, [allEtfData, page, rowsPerPage]);
+    setEtfData(filteredData.slice(startIndex, endIndex));
+    console.log(`📄 Page ${page}: Showing ${startIndex + 1}-${Math.min(endIndex, filteredData.length)} of ${filteredData.length} filtered ETFs`);
+    console.timeEnd('  ⏱️ Filter and paginate data');
+  }, [allEtfData, page, rowsPerPage, searchTerm]);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -546,7 +568,25 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ETF Table Header with Export Buttons */}
+          {/* Search Box */}
+          <div className="mb-4">
+            <div className="relative max-w-md">
+              <input
+                type="text"
+                placeholder={language === 'en' ? 'Search ticker, issuer, index...' : '搜索代码、发行商、指数...'}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+            </div>
+
+            {/* ETF Table Header with Export Buttons */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
             {/* Top Scrollbar */}
             <div
@@ -857,11 +897,11 @@ export default function Home() {
               <div className="text-center">
                 <div className="text-sm text-gray-600">
                   {language === 'en'
-                    ? `Showing ${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, allEtfData.length)} of ${allEtfData.length} ETFs`
-                    : `显示第 ${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, allEtfData.length)} 条，共 ${allEtfData.length} 个ETF`
+                    ? `Showing ${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, filteredCount)} of ${filteredCount} ETFs`
+                    : `显示第 ${(page - 1) * rowsPerPage + 1}-${Math.min(page * rowsPerPage, filteredCount)} 条，共 ${filteredCount} 个ETF`
                   }
                 </div>
-                {selectedLeverage === 'all' && selectedIssuer === 'all' && allEtfData.length >= 200 && (
+                {selectedLeverage === 'all' && selectedIssuer === 'all' && allEtfData.length >= 200 && !searchTerm && (
                   <div className="text-xs text-gray-500 mt-1">
                     {language === 'en'
                       ? 'Showing top 200 by assets. Select a leverage type to see more.'
@@ -871,7 +911,7 @@ export default function Home() {
                 )}
               </div>
               <Pagination
-                count={Math.ceil(allEtfData.length / rowsPerPage)}
+                count={Math.ceil(filteredCount / rowsPerPage)}
                 page={page}
                 onChange={(event, value) => setPage(value)}
                 color="primary"
