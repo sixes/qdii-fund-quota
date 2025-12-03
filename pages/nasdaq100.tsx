@@ -82,7 +82,7 @@ function Nasdaq100() {
   return (
     <>
       <Head>
-        <title>{t.nasdaq100.title} | Nasdaq 100 Tracker</title>
+        <title>{language === 'en' ? 'Nasdaq 100 Index Tracker | Nasdaq 100 Tracker' : '纳斯达克100指数 | Nasdaq 100 Tracker'}</title>
         <meta name="description" content={language === 'en' ? 'Nasdaq 100 index constituents and performance data. Track the top 100 NASDAQ stocks in real-time.' : '纳斯达克100指数成分股和表现数据。实时追踪前100家纳斯达克上市公司。'} />
         <meta name="keywords" content={language === 'en' ? 'Nasdaq 100, tech stocks, index constituents, NASDAQ, QQQ, stock tracker, market data' : '纳斯达克100，科技股，指数成分，纳指，QQQ，股票追踪，市场数据'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

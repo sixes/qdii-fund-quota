@@ -47,7 +47,7 @@ export default function Contact() {
     return (
       <>
         <Head>
-          <title>{t.contact.title}</title>
+          <title>{language === 'en' ? 'Contact Us' : '联系我们'}</title>
           <meta name="description" content={t.contact.description} />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <link rel="icon" href="/favicon.ico" />
@@ -87,7 +87,7 @@ export default function Contact() {
   return (
     <>
       <Head>
-        <title>{t.contact.title}</title>
+        <title>{language === 'en' ? 'Contact Us' : '联系我们'}</title>
         <meta name="description" content={t.contact.description} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />

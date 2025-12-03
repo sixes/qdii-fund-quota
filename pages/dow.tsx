@@ -84,7 +84,7 @@ function DowPage() {
   return (
     <>
       <Head>
-        <title>{t.dow.title} | Dow Jones Tracker</title>
+        <title>{language === 'en' ? 'Dow Jones Industrial Average Tracker | Dow Jones Tracker' : '道琼斯工业平均 | Dow Jones Tracker'}</title>
         <meta name="description" content={language === 'en' ? 'Dow Jones Industrial Average constituents and performance. Track the 30 largest US companies in real-time with dividends and analysis.' : '道琼斯工业平均指数成分股和表现。实时追踪美国30家最大公司，包含红利和分析。'} />
         <meta name="keywords" content={language === 'en' ? 'Dow Jones, DJIA, Dow 30, blue chip stocks, DIA, dividend stocks, large cap, index constituents, market data' : '道琼斯，DJIA，道指30，蓝筹股，DIA，股息股，大盘，指数成分，市场数据'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

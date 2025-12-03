@@ -447,7 +447,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>{t.title} | Leveraged ETF Tracker</title>
+        <title>{language === 'en' ? 'Leveraged ETF Performance Tracker | Leveraged ETF Tracker' : '杠杆ETF表现追踪器 | Leveraged ETF Tracker'}</title>
         <meta name="description" content={language === 'en' ? 'Track leveraged ETF performance, compare fees, and analyze 2X and 3X leverage funds. Real-time data and export to Excel.' : '追踪杠杆ETF表现，比较费用，分析2倍和3倍杠杆基金。实时数据和导出Excel。'} />
         <meta name="keywords" content={language === 'en' ? 'leveraged ETF, 3X ETF, 2X ETF, Direxion, ProShares, ETF tracker, investment performance, stock performance' : '杠杆ETF，3倍ETF，2倍ETF，Direxion，ProShares，ETF追踪，投资表现，股票表现'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

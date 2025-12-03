@@ -82,7 +82,7 @@ function SP500() {
   return (
     <>
       <Head>
-        <title>{t.sp500.title} | S&P 500 Tracker</title>
+        <title>{language === 'en' ? 'S&P 500 Index Tracker | S&P 500 Tracker' : '标普500指数 | S&P 500 Tracker'}</title>
         <meta name="description" content={language === 'en' ? 'S&P 500 index constituents and performance data. Track the top 500 US stocks in real-time.' : '标普500指数成分股和表现数据。实时追踪美国500强上市公司。'} />
         <meta name="keywords" content={language === 'en' ? 'S&P 500, SPY, large cap stocks, index constituents, stock tracker, market data, US stocks' : '标普500，SPY，大盘股，指数成分，股票追踪，市场数据，美股'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
