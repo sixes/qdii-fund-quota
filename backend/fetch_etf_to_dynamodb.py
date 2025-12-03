@@ -19,6 +19,7 @@ from botocore.exceptions import ClientError
 # Configuration
 API_URL = "https://stockanalysis.com/api/screener/e/bd/etfLeverage+issuer+aum+etfIndex+assetClass+expenseRatio+peRatio+price+volume+ch1w+ch1m+ch6m+chYTD+ch1y+ch3y+ch5y+ch10y+high52+low52+allTimeLow+allTimeLowChange+allTimeHigh+allTimeHighDate+allTimeHighChange+allTimeLowDate.json"
 TABLE_NAME = "ETFData"
+MARKET_STATS_TABLE = "ETFMarketStats"
 REGION_NAME = "us-east-1"  # Change to your preferred region
 HEALTHCHECK_URL = "https://hc-ping.com/f626df6e-552b-46a7-8ebf-f23865a042c4"
 LOG_FILE = "etf_sync.log"
@@ -159,6 +160,55 @@ def create_table():
             raise
 
 
+def create_market_stats_table():
+    """
+    Create DynamoDB table for ETF market statistics.
+    Key structure:
+    - pk (partition key): "MARKET_STATS" for global stats, "ISSUER#{issuer_name}" for issuer stats
+    - sk (sort key): "TOTAL_AUM", "ISSUER", "EXPENSE_RATIO" for organizing different stat types
+    """
+    try:
+        table = dynamodb.create_table(
+            TableName=MARKET_STATS_TABLE,
+            KeySchema=[
+                {
+                    'AttributeName': 'pk',
+                    'KeyType': 'HASH'  # Partition key
+                },
+                {
+                    'AttributeName': 'sk',
+                    'KeyType': 'RANGE'  # Sort key
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'pk',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'sk',
+                    'AttributeType': 'S'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+
+        logger.info(f"Creating table {MARKET_STATS_TABLE}...")
+        table.wait_until_exists()
+        logger.info(f"Table {MARKET_STATS_TABLE} created successfully!")
+        return table
+
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceInUseException':
+            logger.info(f"Table {MARKET_STATS_TABLE} already exists.")
+            return dynamodb.Table(MARKET_STATS_TABLE)
+        else:
+            raise
+
+
 def fetch_etf_data():
     """
     Fetch ETF data from the API.
@@ -238,28 +288,147 @@ def batch_write_to_dynamodb(table, etf_data):
     return success_count, error_count
 
 
-def query_by_leverage(table, leverage_type):
+def calculate_market_statistics(etf_data):
     """
-    Example query function to demonstrate searching by etfLeverage.
+    Calculate market statistics from ETF data:
+    1. Total AUM of all ETFs
+    2. Total AUM and product count for each issuer
+    3. Product count for each expense ratio range
+    
+    Returns: dict with organized market statistics
     """
-    logger.info(f"Querying ETFs with leverage type: {leverage_type}")
+    logger.info("Calculating market statistics...")
+    
+    stats = {
+        'total_aum': Decimal('0'),
+        'total_etf_count': 0,
+        'issuers': {},  # {issuer_name: {aum, count}}
+        'expense_ratios': {},  # {ratio_range: count}
+        'timestamp': datetime.utcnow().isoformat()
+    }
+    
+    # Expense ratio ranges for bucketing
+    expense_ratio_ranges = {
+        '0.00-0.10': 0,
+        '0.10-0.25': 0,
+        '0.25-0.50': 0,
+        '0.50-1.00': 0,
+        '1.00-2.00': 0,
+        '2.00+': 0,
+        'N/A': 0
+    }
+    
+    for ticker, data in etf_data.items():
+        stats['total_etf_count'] += 1
+        
+        # Calculate total AUM
+        aum = data.get('aum')
+        if aum is not None:
+            aum_value = Decimal(str(aum)) if isinstance(aum, (int, float)) else Decimal('0')
+            stats['total_aum'] += aum_value
+        
+        # Track by issuer
+        issuer = data.get('issuer', 'Unknown')
+        if issuer not in stats['issuers']:
+            stats['issuers'][issuer] = {
+                'aum': Decimal('0'),
+                'count': 0
+            }
+        
+        stats['issuers'][issuer]['count'] += 1
+        if aum is not None:
+            aum_value = Decimal(str(aum)) if isinstance(aum, (int, float)) else Decimal('0')
+            stats['issuers'][issuer]['aum'] += aum_value
+        
+        # Track by expense ratio
+        expense_ratio = data.get('expenseRatio')
+        if expense_ratio is None:
+            expense_ratio_ranges['N/A'] += 1
+        else:
+            ratio = float(expense_ratio)
+            if ratio < 0.10:
+                expense_ratio_ranges['0.00-0.10'] += 1
+            elif ratio < 0.25:
+                expense_ratio_ranges['0.10-0.25'] += 1
+            elif ratio < 0.50:
+                expense_ratio_ranges['0.25-0.50'] += 1
+            elif ratio < 1.00:
+                expense_ratio_ranges['0.50-1.00'] += 1
+            elif ratio < 2.00:
+                expense_ratio_ranges['1.00-2.00'] += 1
+            else:
+                expense_ratio_ranges['2.00+'] += 1
+    
+    stats['expense_ratios'] = expense_ratio_ranges
+    
+    logger.info(f"✓ Market statistics calculated:")
+    logger.info(f"  - Total AUM: ${stats['total_aum']:,.2f}")
+    logger.info(f"  - Total ETF Count: {stats['total_etf_count']}")
+    logger.info(f"  - Issuers: {len(stats['issuers'])}")
+    
+    return stats
 
-    response = table.query(
-        IndexName='etfLeverage-index',
-        KeyConditionExpression='etfLeverage = :leverage',
-        ExpressionAttributeValues={
-            ':leverage': leverage_type
-        }
-    )
 
-    items = response.get('Items', [])
-    logger.info(f"Found {len(items)} ETFs with leverage type '{leverage_type}'")
-
-    # Log first 3 as examples
-    for i, item in enumerate(items[:3]):
-        logger.info(f"  {i+1}. {item['ticker']} - {item.get('issuer', 'N/A')}")
-
-    return items
+def save_market_statistics(stats_table, stats):
+    """
+    Save market statistics to DynamoDB with proper key structure.
+    
+    Key structure:
+    - Global stats: pk="MARKET_STATS", sk="TOTAL_AUM"
+    - Issuer stats: pk="ISSUER#{issuer_name}", sk="STATS"
+    - Expense ratio stats: pk="MARKET_STATS", sk="EXPENSE_RATIOS"
+    """
+    logger.info("Saving market statistics to DynamoDB...")
+    
+    try:
+        # 1. Save global total AUM
+        stats_table.put_item(
+            Item={
+                'pk': 'MARKET_STATS',
+                'sk': 'TOTAL_AUM',
+                'totalAUM': stats['total_aum'],
+                'totalETFCount': stats['total_etf_count'],
+                'timestamp': stats['timestamp']
+            }
+        )
+        logger.info("✓ Saved global total AUM")
+        
+        # 2. Save issuer statistics
+        for issuer, issuer_stats in stats['issuers'].items():
+            stats_table.put_item(
+                Item={
+                    'pk': f'ISSUER#{issuer}',
+                    'sk': 'STATS',
+                    'issuer': issuer,
+                    'aum': issuer_stats['aum'],
+                    'count': issuer_stats['count'],
+                    'timestamp': stats['timestamp']
+                }
+            )
+        logger.info(f"✓ Saved statistics for {len(stats['issuers'])} issuers")
+        
+        # 3. Save expense ratio statistics
+        expense_ratio_items = []
+        for ratio_range, count in stats['expense_ratios'].items():
+            expense_ratio_items.append({
+                'pk': 'MARKET_STATS',
+                'sk': f'EXPENSE_RATIO#{ratio_range}',
+                'expenseRatioRange': ratio_range,
+                'count': count,
+                'timestamp': stats['timestamp']
+            })
+        
+        # Batch write expense ratio stats
+        with stats_table.batch_writer() as batch:
+            for item in expense_ratio_items:
+                batch.put_item(Item=item)
+        logger.info(f"✓ Saved expense ratio statistics")
+        
+        logger.info("✓ All market statistics saved successfully!")
+        
+    except ClientError as e:
+        logger.error(f"Failed to save market statistics: {e}")
+        raise
 
 
 def main():
@@ -275,12 +444,14 @@ def main():
     logger.info("="*60)
 
     try:
-        # Step 1: Create table if not exists
+        # Step 1: Create tables if not exists
         table = create_table()
+        stats_table = create_market_stats_table()
 
-        # Wait for table to be fully active
-        logger.info("Waiting for table to be fully active...")
+        # Wait for tables to be fully active
+        logger.info("Waiting for tables to be fully active...")
         table.wait_until_exists()
+        stats_table.wait_until_exists()
 
         # Step 2: Fetch data from API
         etf_data = fetch_etf_data()
@@ -288,7 +459,11 @@ def main():
         # Step 3: Batch upsert data into DynamoDB
         success_count, error_count = batch_write_to_dynamodb(table, etf_data)
 
-        # Step 4: Example queries (optional, for verification)
+        # Step 4: Calculate and save market statistics
+        market_stats = calculate_market_statistics(etf_data)
+        save_market_statistics(stats_table, market_stats)
+
+        # Step 5: Example queries (optional, for verification)
 #        logger.info("\n" + "="*60)
 #        logger.info("Sample queries for verification:")
 #        logger.info("="*60)
@@ -303,6 +478,7 @@ def main():
         logger.info(f"✓ Job completed successfully!")
         logger.info(f"Duration: {duration:.2f} seconds")
         logger.info(f"Records processed: {success_count}/{len(etf_data)}")
+        logger.info(f"Market statistics saved for {len(market_stats['issuers'])} issuers")
         logger.info("="*60)
 
         # Signal success to healthcheck

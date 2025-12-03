@@ -25,3 +25,7 @@ quota.json
 
 # Python venv
 /backend/letf
+*/__pycache__/
+
+*.swp
+*/*.swp

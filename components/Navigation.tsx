@@ -95,6 +95,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
               </svg>
             </button>
 
+            {/* ETF Stats Button */}
+            <Link
+              href={language === 'zh' ? '/etf-stats?lang=zh' : '/etf-stats'}
+              className="hidden sm:block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+            >
+              {language === 'en' ? 'ETF Stats' : 'ETF统计'}
+            </Link>
+
             <div className="hidden md:flex items-baseline space-x-4 relative">
               {/* Nasdaq 100 Dropdown */}
               <div className="relative">
@@ -250,6 +258,7 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
               )}
             </div>
 
+
             {/* Contact Us Button */}
             <Link
               href={language === 'zh' ? '/contact?lang=zh' : '/contact'}
@@ -282,6 +291,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200">
             <div className="px-2 pt-2 pb-3 space-y-1">
+              {/* ETF Stats */}
+              <Link
+                href={language === 'zh' ? '/etf-stats?lang=zh' : '/etf-stats'}
+                className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {language === 'en' ? 'ETF Stats' : 'ETF统计'}
+              </Link>
               {/* Nasdaq 100 */}
               <div className="space-y-1">
                 <div className="px-3 py-2 text-sm font-medium text-gray-900">Nasdaq 100</div>
@@ -383,6 +400,7 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                   )}
                 </>
               )}
+
 
               {/* Contact Us */}
               <Link
