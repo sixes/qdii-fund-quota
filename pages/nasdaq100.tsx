@@ -82,21 +82,18 @@ function Nasdaq100() {
   return (
     <>
       <Head>
-        <title>{t.nasdaq100.title}</title>
-        <meta name="description" content={t.nasdaq100.description} />
+        <title>{t.nasdaq100.title} | Nasdaq 100 Tracker</title>
+        <meta name="description" content={language === 'en' ? 'Nasdaq 100 index constituents and performance data. Track the top 100 NASDAQ stocks in real-time.' : '纳斯达克100指数成分股和表现数据。实时追踪前100家纳斯达克上市公司。'} />
+        <meta name="keywords" content={language === 'en' ? 'Nasdaq 100, tech stocks, index constituents, NASDAQ, QQQ, stock tracker, market data' : '纳斯达克100，科技股，指数成分，纳指，QQQ，股票追踪，市场数据'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Nasdaq 100 Index Tracker" />
+        <meta property="og:description" content={language === 'en' ? 'Real-time Nasdaq 100 constituent stocks and performance' : '实时纳斯达克100成分股和表现'} />
+        <meta property="og:type" content="website" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://www.qdiiquota.pro/nasdaq100" />
       </Head>
 
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">{`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);} 
-          gtag('js', new Date());
-          gtag('config', 'G-KYCK18CLKM');
-        `}
-      </Script>
 
       <div className="min-h-screen bg-gray-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />

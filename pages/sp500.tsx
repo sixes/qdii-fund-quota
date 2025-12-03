@@ -82,21 +82,18 @@ function SP500() {
   return (
     <>
       <Head>
-        <title>{t.sp500.title}</title>
-        <meta name="description" content={t.sp500.description} />
+        <title>{t.sp500.title} | S&P 500 Tracker</title>
+        <meta name="description" content={language === 'en' ? 'S&P 500 index constituents and performance data. Track the top 500 US stocks in real-time.' : '标普500指数成分股和表现数据。实时追踪美国500强上市公司。'} />
+        <meta name="keywords" content={language === 'en' ? 'S&P 500, SPY, large cap stocks, index constituents, stock tracker, market data, US stocks' : '标普500，SPY，大盘股，指数成分，股票追踪，市场数据，美股'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="S&P 500 Index Tracker" />
+        <meta property="og:description" content={language === 'en' ? 'Real-time S&P 500 constituent stocks and performance' : '实时标普500成分股和表现'} />
+        <meta property="og:type" content="website" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://www.qdiiquota.pro/sp500" />
       </Head>
 
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">{`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);} 
-          gtag('js', new Date());
-          gtag('config', 'G-KYCK18CLKM');
-        `}
-      </Script>
 
       <div className="min-h-screen bg-gray-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />

@@ -84,28 +84,20 @@ function DowPage() {
   return (
     <>
       <Head>
-        <title>{t.dow.title}</title>
-        <meta name="description" content={t.dow.description} />
-        <meta name="keywords" content="Dow Jones, DJIA, Dow 30, Dow Jones Industrial Average, blue chip stocks, DJI, index constituents, stock prices, historical returns, P/E ratio, market cap, ATH analysis, industrial stocks, US stock market, investment analysis, dividend stocks" />
+        <title>{t.dow.title} | Dow Jones Tracker</title>
+        <meta name="description" content={language === 'en' ? 'Dow Jones Industrial Average constituents and performance. Track the 30 largest US companies in real-time with dividends and analysis.' : '道琼斯工业平均指数成分股和表现。实时追踪美国30家最大公司，包含红利和分析。'} />
+        <meta name="keywords" content={language === 'en' ? 'Dow Jones, DJIA, Dow 30, blue chip stocks, DIA, dividend stocks, large cap, index constituents, market data' : '道琼斯，DJIA，道指30，蓝筹股，DIA，股息股，大盘，指数成分，市场数据'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Dow Jones Industrial Average - 30 Constituents & Historical Returns" />
-        <meta property="og:description" content="Comprehensive Dow Jones analysis with real-time data on all 30 blue chip constituents, prices, and historical performance charts." />
+        <meta property="og:title" content="Dow Jones Industrial Average Tracker" />
+        <meta property="og:description" content={language === 'en' ? 'Real-time Dow Jones 30 constituent stocks and performance' : '实时道琼斯30成分股和表现'} />
         <meta property="og:type" content="website" />
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="canonical" href="https://yoursite.com/dow" />
-      </Head>
+         <link rel="icon" href="/favicon.ico" />
+         <link rel="canonical" href="https://www.qdiiquota.pro/dow" />
+       </Head>
 
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">{`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);} 
-          gtag('js', new Date());
-          gtag('config', 'G-KYCK18CLKM');
-        `}
-      </Script>
 
-            <div className="min-h-screen bg-gray-100 flex flex-col">
+      <div className="min-h-screen bg-gray-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />
 
         <main className="py-6">

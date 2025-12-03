@@ -1074,22 +1074,18 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>{language === 'en' ? t.en.title : t.zh.title}</title>
-        <meta name="description" content={language === 'en' ? t.en.description : t.zh.description} />
-        <meta name="keywords" content={language === 'en' ? "US stock indices, Nasdaq 100, S&P 500, Dow Jones, stock constituents" : "QDII基金, 申购额度查询, 纳指, 纳斯达克指数，标普, 纳指额度, 标普额度, 特斯拉, META， 苹果， 谷歌, MEGA， 亚马逊， 英伟达， 腾讯"} />
+        <title>{language === 'en' ? 'US Stock Indices Tracker | QDII Fund Quotas' : 'QDII基金额度追踪器 | 美股指数数据'}</title>
+        <meta name="description" content={language === 'en' ? 'Track US stock market indices (Nasdaq 100, S&P 500, Dow Jones) and QDII fund quotas. Real-time data, constituent stocks, and investment analysis.' : '追踪美股指数（纳指100、标普500、道琼斯）和QDII基金申购额度。实时数据、成分股和投资分析。'} />
+        <meta name="keywords" content={language === 'en' ? "US stock indices, Nasdaq 100, S&P 500, Dow Jones, QDII quota, leveraged ETF, stock tracker, investment data, market analysis" : "QDII基金, 申购额度查询, 纳指, 纳斯达克指数，标普, 美股指数, 杠杆ETF，指数成分股，投资追踪，市场分析"} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
+        <meta property="og:title" content={language === 'en' ? 'US Stock Indices Tracker' : 'QDII基金额度追踪器'} />
+        <meta property="og:description" content={language === 'en' ? 'Real-time US stock market data and QDII fund information' : '实时美股市场数据和QDII基金信息'} />
+        <meta property="og:type" content="website" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://www.qdiiquota.pro/funds" />
       </Head>
 
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">{`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);} 
-          gtag('js', new Date());
-          gtag('config', 'G-KYCK18CLKM');
-        `}
-      </Script>
 
       {language === 'en' ? (
         <div className="min-h-screen bg-gray-100 flex flex-col">

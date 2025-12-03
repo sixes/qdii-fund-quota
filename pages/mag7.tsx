@@ -471,10 +471,16 @@ export default function Mag7() {
   return (
     <>
       <Head>
-        <title>Magnificent 7 Stocks - Real-time Charts</title>
-        <meta name="description" content="Real-time intraday charts for the Magnificent 7 tech stocks: Apple, Microsoft, Alphabet, Amazon, NVIDIA, Meta, and Tesla" />
+        <title>Magnificent 7 Stocks | Real-time Tech Stock Charts</title>
+        <meta name="description" content={language === 'en' ? 'Real-time intraday charts for the Magnificent 7 tech stocks: Apple, Microsoft, Alphabet, Amazon, NVIDIA, Meta, and Tesla. Track performance and market data.' : '科技股七巨头（苹果、微软、谷歌、亚马逊、英伟达、Meta、特斯拉）的实时日内图表。追踪表现和市场数据。'} />
+        <meta name="keywords" content={language === 'en' ? 'Magnificent 7, AAPL, MSFT, GOOGL, AMZN, NVDA, META, TSLA, tech stocks, stock charts, real-time data, market analysis' : '七巨头，苹果，微软，谷歌，亚马逊，英伟达，Meta，特斯拉，科技股，股票图表，实时数据，市场分析'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Magnificent 7 Tech Stocks Tracker" />
+        <meta property="og:description" content={language === 'en' ? 'Real-time performance of Magnificent 7 tech stocks' : '科技股七巨头的实时表现'} />
+        <meta property="og:type" content="website" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://www.qdiiquota.pro/mag7" />
       </Head>
 
       <div className="min-h-screen bg-gray-100 flex flex-col">

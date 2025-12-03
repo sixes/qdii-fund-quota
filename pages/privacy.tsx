@@ -78,13 +78,6 @@ export default function Privacy() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-KYCK18CLKM" strategy="afterInteractive" />
-      <Script id="google-analytics" strategy="afterInteractive">{`
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);} 
-        gtag('js', new Date());
-        gtag('config', 'G-KYCK18CLKM');
-      `}</Script>
 
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
         <Navigation language={language} onLanguageChange={handleLanguageChange} />

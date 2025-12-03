@@ -238,6 +238,14 @@ export default function Home() {
       setSortKey(key);
       setSortDirection('desc');
     }
+    // Track sorting in analytics
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'sort_data', {
+        sort_by: key,
+        sort_order: sortDirection === 'asc' ? 'desc' : 'asc',
+        event_category: 'engagement'
+      });
+    }
   };
 
   const formatNumber = (num: number | null, decimals: number = 2): string => {
@@ -324,6 +332,15 @@ export default function Home() {
   const t = translations[language];
 
   const handleExport = (format: 'excel' | 'csv') => {
+    // Track export event in Google Analytics and Vercel
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'export_data', {
+        export_format: format,
+        event_category: 'engagement',
+        event_label: `${format} export`
+      });
+    }
+
     const dataToExport = allEtfData;
 
     if (format === 'csv') {
@@ -430,10 +447,15 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>{t.title}</title>
-        <meta name="description" content={t.description} />
+        <title>{t.title} | Leveraged ETF Tracker</title>
+        <meta name="description" content={language === 'en' ? 'Track leveraged ETF performance, compare fees, and analyze 2X and 3X leverage funds. Real-time data and export to Excel.' : '追踪杠杆ETF表现，比较费用，分析2倍和3倍杠杆基金。实时数据和导出Excel。'} />
+        <meta name="keywords" content={language === 'en' ? 'leveraged ETF, 3X ETF, 2X ETF, Direxion, ProShares, ETF tracker, investment performance, stock performance' : '杠杆ETF，3倍ETF，2倍ETF，Direxion，ProShares，ETF追踪，投资表现，股票表现'} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta property="og:title" content={t.title} />
+        <meta property="og:description" content={language === 'en' ? 'Track and analyze leveraged ETF performance data' : '追踪和分析杠杆ETF表现数据'} />
+        <meta property="og:type" content="website" />
         <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://www.qdiiquota.pro" />
       </Head>
 
       <Navigation language={language} onLanguageChange={setLanguage} />
@@ -451,9 +473,18 @@ export default function Home() {
             <h2 className="text-xl font-semibold text-gray-800 mb-3">{t.overview}</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {summaryData.map((summary) => (
-                <button
+               <button
                   key={summary.leverageType}
-                  onClick={() => setSelectedLeverage(summary.leverageType)}
+                  onClick={() => {
+                    setSelectedLeverage(summary.leverageType);
+                    // Track leverage type selection
+                    if (typeof window !== 'undefined' && (window as any).gtag) {
+                      (window as any).gtag('event', 'filter_by_leverage', {
+                        leverage_type: summary.leverageType,
+                        event_category: 'engagement'
+                      });
+                    }
+                  }}
                   className={`p-3 rounded-lg shadow hover:shadow-md transition-all duration-200 text-left ${
                     selectedLeverage === summary.leverageType
                       ? 'bg-blue-600 text-white ring-2 ring-blue-400'
@@ -514,7 +545,17 @@ export default function Home() {
                 </label>
                 <select
                   value={selectedIssuer}
-                  onChange={(e) => setSelectedIssuer(e.target.value)}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    setSelectedIssuer(newValue);
+                    // Track issuer filter change
+                    if (typeof window !== 'undefined' && (window as any).gtag) {
+                      (window as any).gtag('event', 'filter_by_issuer', {
+                        issuer: newValue,
+                        event_category: 'engagement'
+                      });
+                    }
+                  }}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">{language === 'en' ? 'All Issuers' : '所有发行商'}</option>
@@ -530,7 +571,16 @@ export default function Home() {
               {prominentIssuers.map((issuer) => (
                 <button
                   key={issuer}
-                  onClick={() => setSelectedIssuer(issuer)}
+                  onClick={() => {
+                    setSelectedIssuer(issuer);
+                    // Track issuer quick filter click
+                    if (typeof window !== 'undefined' && (window as any).gtag) {
+                      (window as any).gtag('event', 'quick_filter_issuer', {
+                        issuer: issuer,
+                        event_category: 'engagement'
+                      });
+                    }
+                  }}
                   className={`px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                     selectedIssuer === issuer
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -562,7 +612,20 @@ export default function Home() {
         placeholder={language === 'en' ? 'Search ticker, issuer, index...' : '搜索代码、发行商、指数...'}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
         value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setSearchTerm(newValue);
+          // Track search analytics
+          if (newValue.trim().length > 0) {
+            if (typeof window !== 'undefined' && (window as any).gtag) {
+              (window as any).gtag('event', 'search_etf', {
+                search_term: newValue,
+                search_length: newValue.length,
+                event_category: 'engagement'
+              });
+            }
+          }
+        }}
       />
       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
