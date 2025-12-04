@@ -38,7 +38,7 @@ export default async function handler(
     items.forEach((item: any) => {
       if (item.pk === 'MARKET_STATS' && item.sk === 'TOTAL_AUM') {
         globalStats = item
-      } else if (item.pk?.startsWith('ISSUER#')) {
+      } else if (item.pk?.startsWith('ISSUER#') && item.sk === 'STATS') {
         issuers.push({
           issuer: item.issuer,
           aum: Number(item.aum) || 0,

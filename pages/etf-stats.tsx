@@ -56,6 +56,9 @@ export default function ETFStats() {
   const [language, setLanguage] = useState<'en' | 'zh'>('en')
   const [stats, setStats] = useState<MarketStats | null>(null)
   const [leverageStats, setLeverageStats] = useState<LeverageStat[]>([])
+  const [issuerByLeverage, setIssuerByLeverage] = useState<{
+    [leverageType: string]: Array<{ issuer: string; aum: number; count: number }>
+  }>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -132,6 +135,7 @@ export default function ETFStats() {
         if (leverageRes.ok) {
           const leverageData = await leverageRes.json()
           setLeverageStats(leverageData.leverageStats || [])
+          setIssuerByLeverage(leverageData.issuerByLeverage || {})
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error')
@@ -421,7 +425,6 @@ export default function ETFStats() {
                       scales: {
                         x: {
                           type: 'logarithmic' as const,
-                          beginAtZero: false,
                           grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         },
                         y: {
@@ -464,7 +467,6 @@ export default function ETFStats() {
                       scales: {
                         x: {
                           type: 'logarithmic' as const,
-                          beginAtZero: false,
                           grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         },
                         y: {
@@ -479,6 +481,82 @@ export default function ETFStats() {
                 </div>
                 <p className="text-xs text-gray-500 mt-2">{language === 'en' ? 'Note: Logarithmic scale used for better comparison' : '注：使用对数刻度以便更好比较'}</p>
               </div>
+            </div>
+          )}
+
+          {/* Issuer Breakdown by Leverage Type - Chart */}
+          {Object.keys(issuerByLeverage).length > 0 && leverageStats.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                {language === 'en' ? 'Top Issuers by Leverage Type' : '按杠杆类型分类的顶级发行商'}
+              </h2>
+              <div className="relative" style={{ height: '500px' }}>
+                <Bar
+                  data={{
+                    labels: leverageStats.map(l => l.leverageType),
+                    datasets: (() => {
+                      // Get unique top issuers across all leverage types
+                      const issuerSet = new Set<string>()
+                      Object.values(issuerByLeverage).forEach(issuers => {
+                        issuers.slice(0, 3).forEach(i => issuerSet.add(i.issuer))
+                      })
+                      const topIssuers = Array.from(issuerSet).slice(0, 8)
+                      
+                      // Create dataset for each issuer
+                      return topIssuers.map((issuer, idx) => ({
+                        label: issuer,
+                        data: leverageStats.map(leverage => {
+                          const issuerData = (issuerByLeverage[leverage.leverageType] || []).find(
+                            i => i.issuer === issuer
+                          )
+                          return issuerData ? issuerData.aum / 1e9 : 0
+                        }),
+                        backgroundColor: colors[idx % colors.length],
+                        borderColor: 'rgba(0, 0, 0, 0.1)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                      }))
+                    })()
+                  }}
+                  options={{
+                    ...chartOptions,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y' as const,
+                    plugins: {
+                      ...chartOptions.plugins,
+                      tooltip: {
+                        ...chartOptions.plugins.tooltip,
+                        callbacks: {
+                          label: function(context: any) {
+                            const label = context.dataset.label || ''
+                            const value = context.parsed.x
+                            return `${label}: $${value.toFixed(2)}B`
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        stacked: true,
+                        type: 'logarithmic',
+                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                        title: {
+                          display: true,
+                          text: language === 'en' ? 'AUM (Billions USD)' : 'AUM（十亿美元）'
+                        }
+                      },
+                      y: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: {
+                          font: { size: 11 }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">{language === 'en' ? 'Note: Shows top issuers (up to 8) for each leverage type with logarithmic scale' : '注：显示每个杠杆类型的顶级发行商（最多5个），使用对数刻度'}</p>
             </div>
           )}
 

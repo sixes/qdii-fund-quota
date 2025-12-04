@@ -305,6 +305,7 @@ def calculate_market_statistics(etf_data):
         'issuers': {},  # {issuer_name: {aum, count}}
         'expense_ratios': {},  # {ratio_range: count}
         'leverage_types': {},  # {leverage_type: {aum, count}}
+        'issuer_leverage': {},  # {issuer_name: {leverage_type: {aum, count}}}
         'timestamp': datetime.utcnow().isoformat()
     }
     
@@ -372,6 +373,21 @@ def calculate_market_statistics(etf_data):
         if aum is not None:
             aum_value = Decimal(str(aum)) if isinstance(aum, (int, float)) else Decimal('0')
             stats['leverage_types'][leverage_type]['aum'] += aum_value
+        
+        # Track by issuer and leverage type
+        if issuer not in stats['issuer_leverage']:
+            stats['issuer_leverage'][issuer] = {}
+        
+        if leverage_type not in stats['issuer_leverage'][issuer]:
+            stats['issuer_leverage'][issuer][leverage_type] = {
+                'aum': Decimal('0'),
+                'count': 0
+            }
+        
+        stats['issuer_leverage'][issuer][leverage_type]['count'] += 1
+        if aum is not None:
+            aum_value = Decimal(str(aum)) if isinstance(aum, (int, float)) else Decimal('0')
+            stats['issuer_leverage'][issuer][leverage_type]['aum'] += aum_value
     
     stats['expense_ratios'] = expense_ratio_ranges
     
@@ -456,6 +472,26 @@ def save_market_statistics(stats_table, stats):
             for item in leverage_items:
                 batch.put_item(Item=item)
         logger.info(f"✓ Saved leverage type statistics for {len(leverage_items)} types")
+        
+        # 5. Save issuer-leverage type statistics
+        issuer_leverage_items = []
+        for issuer, leverage_stats_by_type in stats.get('issuer_leverage', {}).items():
+            for leverage_type, leverage_stats in leverage_stats_by_type.items():
+                issuer_leverage_items.append({
+                    'pk': f'ISSUER#{issuer}',
+                    'sk': f'LEVERAGE#{leverage_type}',
+                    'issuer': issuer,
+                    'leverageType': leverage_type,
+                    'aum': leverage_stats['aum'],
+                    'count': leverage_stats['count'],
+                    'timestamp': stats['timestamp']
+                })
+        
+        # Batch write issuer-leverage stats
+        with stats_table.batch_writer() as batch:
+            for item in issuer_leverage_items:
+                batch.put_item(Item=item)
+        logger.info(f"✓ Saved issuer-leverage type statistics for {len(issuer_leverage_items)} combinations")
         
         
         logger.info("✓ All market statistics saved successfully!")

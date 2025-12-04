@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, ScanCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 const client = new DynamoDBClient({ region: 'us-east-1' })
@@ -17,10 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data = await client.send(new ScanCommand(params))
 
     if (!data.Items || data.Items.length === 0) {
-      return res.status(200).json({ leverageStats: [] })
+      return res.status(200).json({ leverageStats: [], issuerByLeverage: {} })
     }
 
-    // Process and sort by leverage multiplier
+    // Process leverage stats
     const leverageStats = data.Items.map(dbItem => {
       const item = unmarshall(dbItem)
       return {
@@ -48,7 +48,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return getLeverageValue(b.leverageType) - getLeverageValue(a.leverageType)
     })
 
-    res.status(200).json({ leverageStats })
+    // Fetch issuer-leverage data
+    const issuerParams = {
+      TableName: 'ETFMarketStats',
+      FilterExpression: 'begins_with(pk, :pkPrefix) AND begins_with(sk, :skPrefix)',
+      ExpressionAttributeValues: {
+        ':pkPrefix': { S: 'ISSUER#' },
+        ':skPrefix': { S: 'LEVERAGE#' },
+      },
+    }
+
+    const issuerData = await client.send(new ScanCommand(issuerParams))
+    
+    // Organize issuer data by leverage type
+    const issuerByLeverage: {
+      [leverageType: string]: Array<{
+        issuer: string
+        aum: number
+        count: number
+      }>
+    } = {}
+
+    if (issuerData.Items) {
+      issuerData.Items.forEach(dbItem => {
+        const item = unmarshall(dbItem)
+        const leverageType = item.sk.replace('LEVERAGE#', '')
+        
+        if (!issuerByLeverage[leverageType]) {
+          issuerByLeverage[leverageType] = []
+        }
+        
+        issuerByLeverage[leverageType].push({
+          issuer: item.issuer,
+          aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum,
+          count: item.count || 0,
+        })
+      })
+
+      // Sort issuers within each leverage type by AUM (descending)
+      Object.keys(issuerByLeverage).forEach(leverageType => {
+        issuerByLeverage[leverageType].sort((a, b) => b.aum - a.aum)
+      })
+    }
+
+    res.status(200).json({ leverageStats, issuerByLeverage })
   } catch (error) {
     console.error('Error fetching leverage statistics from DynamoDB:', error)
     res.status(500).json({ error: 'Failed to fetch leverage statistics' })
