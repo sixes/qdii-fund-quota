@@ -304,6 +304,7 @@ def calculate_market_statistics(etf_data):
         'total_etf_count': 0,
         'issuers': {},  # {issuer_name: {aum, count}}
         'expense_ratios': {},  # {ratio_range: count}
+        'leverage_types': {},  # {leverage_type: {aum, count}}
         'timestamp': datetime.utcnow().isoformat()
     }
     
@@ -358,6 +359,19 @@ def calculate_market_statistics(etf_data):
                 expense_ratio_ranges['1.00-2.00'] += 1
             else:
                 expense_ratio_ranges['2.00+'] += 1
+        
+        # Track by leverage type
+        leverage_type = data.get('etfLeverage', 'Unknown')
+        if leverage_type not in stats['leverage_types']:
+            stats['leverage_types'][leverage_type] = {
+                'aum': Decimal('0'),
+                'count': 0
+            }
+        
+        stats['leverage_types'][leverage_type]['count'] += 1
+        if aum is not None:
+            aum_value = Decimal(str(aum)) if isinstance(aum, (int, float)) else Decimal('0')
+            stats['leverage_types'][leverage_type]['aum'] += aum_value
     
     stats['expense_ratios'] = expense_ratio_ranges
     
@@ -365,6 +379,7 @@ def calculate_market_statistics(etf_data):
     logger.info(f"  - Total AUM: ${stats['total_aum']:,.2f}")
     logger.info(f"  - Total ETF Count: {stats['total_etf_count']}")
     logger.info(f"  - Issuers: {len(stats['issuers'])}")
+    logger.info(f"  - Leverage Types: {len(stats.get('leverage_types', {}))}")
     
     return stats
 
@@ -423,6 +438,25 @@ def save_market_statistics(stats_table, stats):
             for item in expense_ratio_items:
                 batch.put_item(Item=item)
         logger.info(f"✓ Saved expense ratio statistics")
+        
+        # 4. Save leverage type statistics
+        leverage_items = []
+        for leverage_type, leverage_stats in stats.get('leverage_types', {}).items():
+            leverage_items.append({
+                'pk': f'LEVERAGE#{leverage_type}',
+                'sk': 'STATS',
+                'leverageType': leverage_type,
+                'aum': leverage_stats['aum'],
+                'count': leverage_stats['count'],
+                'timestamp': stats['timestamp']
+            })
+        
+        # Batch write leverage type stats
+        with stats_table.batch_writer() as batch:
+            for item in leverage_items:
+                batch.put_item(Item=item)
+        logger.info(f"✓ Saved leverage type statistics for {len(leverage_items)} types")
+        
         
         logger.info("✓ All market statistics saved successfully!")
         

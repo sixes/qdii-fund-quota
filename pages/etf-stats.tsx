@@ -8,6 +8,7 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   BarElement,
@@ -21,6 +22,7 @@ import { Line, Bar, Doughnut, Pie } from 'react-chartjs-2'
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  LogarithmicScale,
   PointElement,
   LineElement,
   BarElement,
@@ -42,10 +44,18 @@ interface MarketStats {
   timestamp: string
 }
 
+interface LeverageStat {
+  leverageType: string
+  aum: number
+  count: number
+  timestamp: string
+}
+
 export default function ETFStats() {
   const router = useRouter()
   const [language, setLanguage] = useState<'en' | 'zh'>('en')
   const [stats, setStats] = useState<MarketStats | null>(null)
+  const [leverageStats, setLeverageStats] = useState<LeverageStat[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -101,18 +111,28 @@ export default function ETFStats() {
     }
   }, [router.query.lang])
 
-  // Fetch market statistics
+    // Fetch market statistics
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await fetch('/api/etf-market-stats')
-        if (!response.ok) {
+        const [marketRes, leverageRes] = await Promise.all([
+          fetch('/api/etf-market-stats'),
+          fetch('/api/etf-stats-by-leverage')
+        ])
+        
+        if (!marketRes.ok) {
           throw new Error('Failed to fetch statistics')
         }
-        const data: MarketStats = await response.json()
-        setStats(data)
+        
+        const marketData: MarketStats = await marketRes.json()
+        setStats(marketData)
+        
+        if (leverageRes.ok) {
+          const leverageData = await leverageRes.json()
+          setLeverageStats(leverageData.leverageStats || [])
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error')
       } finally {
@@ -185,6 +205,11 @@ export default function ETFStats() {
   // Expense ratio data
   const expenseRatioLabels = Object.keys(stats.expenseRatios)
   const expenseRatioCounts = Object.values(stats.expenseRatios)
+
+  // Leverage type data (already sorted correctly by API)
+  const leverageLabels = leverageStats.map(l => l.leverageType)
+  const leverageAUM = leverageStats.map(l => l.aum / 1e9) // Convert to billions
+  const leverageCounts = leverageStats.map(l => l.count)
 
   // Chart colors
   const colors = [
@@ -367,6 +392,89 @@ export default function ETFStats() {
               />
             </div>
           </div>
+
+          {/* Leverage Type Distribution */}
+          {leverageStats.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Leverage Type AUM Bar Chart */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">{language === 'en' ? 'Leverage Type Distribution' : '杠杆类型分布'}</h2>
+                <div className="relative h-80">
+                  <Bar
+                    data={{
+                      labels: leverageLabels,
+                      datasets: [
+                        {
+                          label: `${translations.aum} (${translations.billion})`,
+                          data: leverageAUM,
+                          backgroundColor: '#10b981',
+                          borderColor: '#059669',
+                          borderWidth: 1,
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      ...chartOptions,
+                      maintainAspectRatio: false,
+                      indexAxis: 'y' as const,
+                      scales: {
+                        x: {
+                          type: 'logarithmic' as const,
+                          beginAtZero: false,
+                          grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        y: {
+                          grid: { display: false }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">{language === 'en' ? 'Note: Logarithmic scale used for better comparison' : '注：使用对数刻度以便更好比较'}</p>
+              </div>
+
+              {/* Leverage Type Product Count */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                  {language === 'en' ? 'ETF Count by Leverage Type' : '杠杆类型ETF数量'}
+                </h2>
+                <div className="relative h-80">
+                  <Bar
+                    data={{
+                      labels: leverageLabels,
+                      datasets: [
+                        {
+                          label: translations.count,
+                          data: leverageCounts,
+                          backgroundColor: '#f59e0b',
+                          borderColor: '#d97706',
+                          borderWidth: 1,
+                          borderRadius: 4
+                        }
+                      ]
+                    }}
+                    options={{
+                      ...chartOptions,
+                      maintainAspectRatio: false,
+                      indexAxis: 'y' as const,
+                      scales: {
+                        x: {
+                          type: 'logarithmic' as const,
+                          beginAtZero: false,
+                          grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        },
+                        y: {
+                          grid: { display: false }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">{language === 'en' ? 'Note: Logarithmic scale used for better comparison' : '注：使用对数刻度以便更好比较'}</p>
+              </div>
+            </div>
+          )}
 
           {/* Detailed Statistics Table */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
