@@ -17,9 +17,12 @@ import requests
 from botocore.exceptions import ClientError
 
 # Configuration
-API_URL = "https://stockanalysis.com/api/screener/e/bd/etfLeverage+issuer+aum+etfIndex+assetClass+expenseRatio+peRatio+price+volume+ch1w+ch1m+ch6m+chYTD+ch1y+ch3y+ch5y+ch10y+high52+low52+allTimeLow+allTimeLowChange+allTimeHigh+allTimeHighDate+allTimeHighChange+allTimeLowDate.json"
+API_URL = "https://stockanalysis.com/api/screener/e/bd/etfLeverage+issuer+aum+etfIndex+assetClass+expenseRatio+peRatio+price+volume+ch1w+ch1m+ch6m+chYTD+ch1y+ch3y+ch5y+ch10y+high52+low52+allTimeLow+allTimeLowChange+allTimeHigh+allTimeHighDate+allTimeHighChange+allTimeLowDate+inceptionDate.json"
 TABLE_NAME = "ETFData"
 MARKET_STATS_TABLE = "ETFMarketStats"
+DELISTED_ETFS_TABLE = "DelistedETFs"
+NEW_LAUNCH_ETFS_TABLE = "NewLaunchETFs"
+GAINERS_LOSERS_TABLE = "ETFGainersLosers"
 REGION_NAME = "us-east-1"  # Change to your preferred region
 HEALTHCHECK_URL = "https://hc-ping.com/f626df6e-552b-46a7-8ebf-f23865a042c4"
 LOG_FILE = "etf_sync.log"
@@ -209,6 +212,124 @@ def create_market_stats_table():
             raise
 
 
+def create_delisted_etfs_table():
+    """
+    Create DynamoDB table for delisted ETFs.
+    Key: ticker (String)
+    """
+    try:
+        table = dynamodb.create_table(
+            TableName=DELISTED_ETFS_TABLE,
+            KeySchema=[
+                {
+                    'AttributeName': 'ticker',
+                    'KeyType': 'HASH'  # Partition key
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'ticker',
+                    'AttributeType': 'S'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+
+        logger.info(f"Creating table {DELISTED_ETFS_TABLE}...")
+        table.wait_until_exists()
+        logger.info(f"Table {DELISTED_ETFS_TABLE} created successfully!")
+        return table
+
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceInUseException':
+            logger.info(f"Table {DELISTED_ETFS_TABLE} already exists.")
+            return dynamodb.Table(DELISTED_ETFS_TABLE)
+        else:
+            raise
+
+
+def create_new_launch_etfs_table():
+    """
+    Create DynamoDB table for new launch ETFs.
+    Key: ticker (String)
+    """
+    try:
+        table = dynamodb.create_table(
+            TableName=NEW_LAUNCH_ETFS_TABLE,
+            KeySchema=[
+                {
+                    'AttributeName': 'ticker',
+                    'KeyType': 'HASH'  # Partition key
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'ticker',
+                    'AttributeType': 'S'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+
+        logger.info(f"Creating table {NEW_LAUNCH_ETFS_TABLE}...")
+        table.wait_until_exists()
+        logger.info(f"Table {NEW_LAUNCH_ETFS_TABLE} created successfully!")
+        return table
+
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceInUseException':
+            logger.info(f"Table {NEW_LAUNCH_ETFS_TABLE} already exists.")
+            return dynamodb.Table(NEW_LAUNCH_ETFS_TABLE)
+        else:
+            raise
+
+
+def create_gainers_losers_table():
+    """
+    Create DynamoDB table for ETF gainers and losers.
+    Key: ticker (String)
+    """
+    try:
+        table = dynamodb.create_table(
+            TableName=GAINERS_LOSERS_TABLE,
+            KeySchema=[
+                {
+                    'AttributeName': 'ticker',
+                    'KeyType': 'HASH'  # Partition key
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'ticker',
+                    'AttributeType': 'S'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+
+        logger.info(f"Creating table {GAINERS_LOSERS_TABLE}...")
+        table.wait_until_exists()
+        logger.info(f"Table {GAINERS_LOSERS_TABLE} created successfully!")
+        return table
+
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceInUseException':
+            logger.info(f"Table {GAINERS_LOSERS_TABLE} already exists.")
+            return dynamodb.Table(GAINERS_LOSERS_TABLE)
+        else:
+            raise
+
+
+
 def fetch_etf_data():
     """
     Fetch ETF data from the API.
@@ -286,6 +407,184 @@ def batch_write_to_dynamodb(table, etf_data):
         raise Exception(f"Failed to insert {error_count} records")
 
     return success_count, error_count
+
+
+def fetch_existing_etf_tickers():
+    """
+    Fetch all existing ETF tickers from the ETFData table.
+    Returns a set of ticker strings.
+    """
+    logger.info("Fetching existing ETF tickers from database...")
+    
+    try:
+        table = dynamodb.Table(TABLE_NAME)
+        existing_tickers = set()
+        last_evaluated_key = None
+        
+        while True:
+            if last_evaluated_key:
+                response = table.scan(ExclusiveStartKey=last_evaluated_key)
+            else:
+                response = table.scan()
+            
+            for item in response.get('Items', []):
+                existing_tickers.add(item['ticker'])
+            
+            last_evaluated_key = response.get('LastEvaluatedKey')
+            if not last_evaluated_key:
+                break
+        
+        logger.info(f"Found {len(existing_tickers)} existing ETFs in database")
+        return existing_tickers
+        
+    except Exception as e:
+        logger.warning(f"Failed to fetch existing ETFs: {e}")
+        return set()
+
+
+def identify_delisted_etfs(old_tickers, new_tickers, etf_data_table):
+    """
+    Identify ETFs that are no longer in the API data (delisted).
+    Save delisted ETFs to DelistedETFs table.
+    """
+    delisted_tickers = old_tickers - new_tickers
+    
+    if not delisted_tickers:
+        logger.info("No delisted ETFs found")
+        return 0
+    
+    logger.info(f"Found {len(delisted_tickers)} delisted ETFs")
+    
+    try:
+        delisted_table = dynamodb.Table(DELISTED_ETFS_TABLE)
+        current_timestamp = datetime.utcnow().isoformat()
+        
+        # Delete old data
+        response = delisted_table.scan()
+        with delisted_table.batch_writer() as batch:
+            for item in response.get('Items', []):
+                batch.delete_item(Key={'ticker': item['ticker']})
+        
+        # Get details of delisted ETFs from current table before deletion
+        etf_table = dynamodb.Table(TABLE_NAME)
+        with delisted_table.batch_writer() as batch:
+            for ticker in delisted_tickers:
+                try:
+                    response = etf_table.get_item(Key={'ticker': ticker})
+                    if 'Item' in response:
+                        item = response['Item'].copy()
+                        item['delistedDate'] = current_timestamp
+                        batch.put_item(Item=item)
+                except Exception as e:
+                    logger.error(f"Failed to save delisted ETF {ticker}: {e}")
+        
+        logger.info(f"✓ Saved {len(delisted_tickers)} delisted ETFs")
+        return len(delisted_tickers)
+        
+    except Exception as e:
+        logger.error(f"Failed to process delisted ETFs: {e}")
+        return 0
+
+
+def save_new_launch_etfs(etf_data):
+    """
+    Filter ETFs launched in the last 10 days and save relevant fields.
+    Delete old data before saving new batch.
+    """
+    logger.info("Processing new launch ETFs...")
+    
+    try:
+        from datetime import timedelta
+        
+        new_launch_table = dynamodb.Table(NEW_LAUNCH_ETFS_TABLE)
+        current_timestamp = datetime.utcnow()
+        ten_days_ago = current_timestamp - timedelta(days=10)
+        
+        # Delete old data
+        response = new_launch_table.scan()
+        with new_launch_table.batch_writer() as batch:
+            for item in response.get('Items', []):
+                batch.delete_item(Key={'ticker': item['ticker']})
+        
+        # Filter new launches
+        new_launches = []
+        for ticker, data in etf_data.items():
+            inception_date_str = data.get('inceptionDate')
+            if inception_date_str:
+                try:
+                    inception_date = datetime.strptime(inception_date_str, '%Y-%m-%d')
+                    if inception_date >= ten_days_ago:
+                        new_launches.append({
+                            'ticker': ticker,
+                            'aum': Decimal(str(data.get('aum', 0))) if data.get('aum') else Decimal('0'),
+                            'issuer': data.get('issuer', 'Unknown'),
+                            'inceptionDate': inception_date_str,
+                            'etfIndex': data.get('etfIndex', ''),
+                            'assetClass': data.get('assetClass', ''),
+                            'expenseRatio': Decimal(str(data.get('expenseRatio', 0))) if data.get('expenseRatio') else Decimal('0'),
+                            'timestamp': current_timestamp.isoformat()
+                        })
+                except (ValueError, TypeError):
+                    pass
+        
+        # Save new launches
+        with new_launch_table.batch_writer() as batch:
+            for item in new_launches:
+                batch.put_item(Item=item)
+        
+        logger.info(f"✓ Saved {len(new_launches)} new launch ETFs")
+        return len(new_launches)
+        
+    except Exception as e:
+        logger.error(f"Failed to process new launch ETFs: {e}")
+        return 0
+
+
+def save_gainers_and_losers(etf_data):
+    """
+    Calculate and save ETF gainers and losers based on various time periods.
+    Delete old data before saving new batch.
+    """
+    logger.info("Processing gainers and losers...")
+    
+    try:
+        gainers_losers_table = dynamodb.Table(GAINERS_LOSERS_TABLE)
+        current_timestamp = datetime.utcnow().isoformat()
+        
+        # Delete old data
+        response = gainers_losers_table.scan()
+        with gainers_losers_table.batch_writer() as batch:
+            for item in response.get('Items', []):
+                batch.delete_item(Key={'ticker': item['ticker']})
+        
+        # Prepare gainers and losers data
+        gainers_losers = []
+        for ticker, data in etf_data.items():
+            gainers_losers.append({
+                'ticker': ticker,
+                'issuer': data.get('issuer', 'Unknown'),
+                'ch1w': Decimal(str(data.get('ch1w', 0))) if data.get('ch1w') else Decimal('0'),
+                'ch1m': Decimal(str(data.get('ch1m', 0))) if data.get('ch1m') else Decimal('0'),
+                'ch6m': Decimal(str(data.get('ch6m', 0))) if data.get('ch6m') else Decimal('0'),
+                'ch1y': Decimal(str(data.get('ch1y', 0))) if data.get('ch1y') else Decimal('0'),
+                'ch3y': Decimal(str(data.get('ch3y', 0))) if data.get('ch3y') else Decimal('0'),
+                'ch5y': Decimal(str(data.get('ch5y', 0))) if data.get('ch5y') else Decimal('0'),
+                'ch10y': Decimal(str(data.get('ch10y', 0))) if data.get('ch10y') else Decimal('0'),
+                'chYTD': Decimal(str(data.get('chYTD', 0))) if data.get('chYTD') else Decimal('0'),
+                'timestamp': current_timestamp
+            })
+        
+        # Save all ETF performance data
+        with gainers_losers_table.batch_writer() as batch:
+            for item in gainers_losers:
+                batch.put_item(Item=item)
+        
+        logger.info(f"✓ Saved performance data for {len(gainers_losers)} ETFs")
+        return len(gainers_losers)
+        
+    except Exception as e:
+        logger.error(f"Failed to process gainers and losers: {e}")
+        return 0
 
 
 def calculate_market_statistics(etf_data):
@@ -517,28 +816,47 @@ def main():
         # Step 1: Create tables if not exists
         table = create_table()
         stats_table = create_market_stats_table()
+        delisted_table = create_delisted_etfs_table()
+        new_launch_table = create_new_launch_etfs_table()
+        gainers_losers_table = create_gainers_losers_table()
 
         # Wait for tables to be fully active
         logger.info("Waiting for tables to be fully active...")
         table.wait_until_exists()
         stats_table.wait_until_exists()
+        delisted_table.wait_until_exists()
+        new_launch_table.wait_until_exists()
+        gainers_losers_table.wait_until_exists()
 
-        # Step 2: Fetch data from API
+        # Step 2: Fetch existing ETF tickers before API call
+        existing_tickers = fetch_existing_etf_tickers()
+
+        # Step 3: Fetch data from API
         etf_data = fetch_etf_data()
+        new_tickers = set(etf_data.keys())
 
-        # Step 3: Batch upsert data into DynamoDB
+        # Step 4: Identify and save delisted ETFs
+        delisted_count = identify_delisted_etfs(existing_tickers, new_tickers, table)
+
+        # Step 5: Delete old ETFData table data and batch upsert new data
+        logger.info("Deleting old ETF data from table...")
+        response = table.scan(ProjectionExpression='ticker')
+        with table.batch_writer() as batch:
+            for item in response.get('Items', []):
+                batch.delete_item(Key={'ticker': item['ticker']})
+        
+        logger.info("✓ Old ETF data deleted")
         success_count, error_count = batch_write_to_dynamodb(table, etf_data)
 
-        # Step 4: Calculate and save market statistics
+        # Step 6: Calculate and save market statistics
         market_stats = calculate_market_statistics(etf_data)
         save_market_statistics(stats_table, market_stats)
 
-        # Step 5: Example queries (optional, for verification)
-#        logger.info("\n" + "="*60)
-#        logger.info("Sample queries for verification:")
-#        logger.info("="*60)
-#        query_by_leverage(table, "Long")
-#        query_by_leverage(table, "2X Long")
+        # Step 7: Process new launch ETFs
+        new_launch_count = save_new_launch_etfs(etf_data)
+
+        # Step 8: Process gainers and losers
+        gainers_losers_count = save_gainers_and_losers(etf_data)
 
         # Calculate duration
         end_time = datetime.utcnow()
@@ -549,6 +867,9 @@ def main():
         logger.info(f"Duration: {duration:.2f} seconds")
         logger.info(f"Records processed: {success_count}/{len(etf_data)}")
         logger.info(f"Market statistics saved for {len(market_stats['issuers'])} issuers")
+        logger.info(f"Delisted ETFs: {delisted_count}")
+        logger.info(f"New launch ETFs (last 10 days): {new_launch_count}")
+        logger.info(f"Gainers/Losers data updated: {gainers_losers_count} ETFs")
         logger.info("="*60)
 
         # Signal success to healthcheck

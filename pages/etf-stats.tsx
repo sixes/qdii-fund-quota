@@ -223,7 +223,7 @@ export default function ETFStats() {
 
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: 'top' as const,
