@@ -399,7 +399,7 @@ export default function ETFStats() {
               {/* Leverage Type AUM Bar Chart */}
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">{language === 'en' ? 'Leverage Type Distribution' : '杠杆类型分布'}</h2>
-                <div className="relative h-80">
+                <div className="relative" style={{ height: `${Math.max(400, leverageLabels.length * 25)}px` }}>
                   <Bar
                     data={{
                       labels: leverageLabels,
@@ -425,7 +425,10 @@ export default function ETFStats() {
                           grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         },
                         y: {
-                          grid: { display: false }
+                          grid: { display: false },
+                          ticks: {
+                            font: { size: 11 }
+                          }
                         }
                       }
                     }}
@@ -439,7 +442,7 @@ export default function ETFStats() {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
                   {language === 'en' ? 'ETF Count by Leverage Type' : '杠杆类型ETF数量'}
                 </h2>
-                <div className="relative h-80">
+                <div className="relative" style={{ height: `${Math.max(400, leverageLabels.length * 25)}px` }}>
                   <Bar
                     data={{
                       labels: leverageLabels,
@@ -465,7 +468,10 @@ export default function ETFStats() {
                           grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         },
                         y: {
-                          grid: { display: false }
+                          grid: { display: false },
+                          ticks: {
+                            font: { size: 11 }
+                          }
                         }
                       }
                     }}
