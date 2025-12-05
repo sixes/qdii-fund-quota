@@ -4,84 +4,73 @@ import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 const client = new DynamoDBClient({ region: 'us-east-1' })
 
-interface ETFPerformance {
+interface ETFGainerLoser {
   ticker: string
+  etf_ticker: string
   issuer: string
+  etfLeverage: string
   etfIndex: string
   aum: number
-  ch1w: number
-  ch1m: number
-  ch6m: number
-  ch1y: number
-  ch3y: number
-  ch5y: number
-  ch10y: number
-  chYTD: number
+  return: number
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const params = {
+    const periods = ['ch1w', 'ch1m', 'ch6m', 'ch1y', 'ch3y', 'ch5y', 'ch10y', 'chYTD']
+    const gainers: Record<string, ETFGainerLoser[]> = {}
+    const losers: Record<string, ETFGainerLoser[]> = {}
+
+    // Fetch all pre-computed gainers and losers data
+    const scanParams = {
       TableName: 'ETFGainersLosers',
     }
 
-    const data = await client.send(new ScanCommand(params))
+    const data = await client.send(new ScanCommand(scanParams))
+    const items = (data.Items || []).map(item => unmarshall(item))
 
-    if (!data.Items || data.Items.length === 0) {
-      return res.status(200).json({
-        gainers: { ticker: [], issuer: [], etfIndex: [], ch1w: [], ch1m: [], ch6m: [], ch1y: [], ch3y: [], ch5y: [], ch10y: [], chYTD: [] },
-        losers: { ticker: [], issuer: [], etfIndex: [], ch1w: [], ch1m: [], ch6m: [], ch1y: [], ch3y: [], ch5y: [], ch10y: [], chYTD: [] },
-      })
+    // Initialize arrays for each period
+    for (const period of periods) {
+      gainers[period] = []
+      losers[period] = []
     }
 
-    const etfs: ETFPerformance[] = data.Items.map(dbItem => {
-      const item = unmarshall(dbItem)
-      return {
-        ticker: item.ticker,
-        issuer: item.issuer || 'Unknown',
-        etfIndex: item.etfIndex,
-        aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum|| 0,
-        ch1w: typeof item.ch1w === 'object' ? Number(item.ch1w) : item.ch1w || 0,
-        ch1m: typeof item.ch1m === 'object' ? Number(item.ch1m) : item.ch1m || 0,
-        ch6m: typeof item.ch6m === 'object' ? Number(item.ch6m) : item.ch6m || 0,
-        ch1y: typeof item.ch1y === 'object' ? Number(item.ch1y) : item.ch1y || 0,
-        ch3y: typeof item.ch3y === 'object' ? Number(item.ch3y) : item.ch3y || 0,
-        ch5y: typeof item.ch5y === 'object' ? Number(item.ch5y) : item.ch5y || 0,
-        ch10y: typeof item.ch10y === 'object' ? Number(item.ch10y) : item.ch10y || 0,
-        chYTD: typeof item.chYTD === 'object' ? Number(item.chYTD) : item.chYTD || 0,
-      }
-    })
+    // Organize items by period and type
+    for (const item of items) {
+      const period = item.period
+      const rankType = item.rank_type
 
-    // Function to get top gainers and losers for a period
-    const getTopByPeriod = (period: keyof Omit<ETFPerformance, 'ticker' | 'issuer' | 'etfIndex'>, limit: number = 10) => {
-      const sorted = [...etfs].sort((a, b) => (b[period] as number) - (a[period] as number))
-      return {
-        gainers: sorted.slice(0, limit).map(e => ({ ticker: e.ticker, issuer: e.issuer, return: e[period], aum: e.aum, etfIndex: e.etfIndex })),
-        losers: sorted.slice(-limit).reverse().map(e => ({ ticker: e.ticker, issuer: e.issuer, return: e[period], aum: e.aum, etfIndex: e.etfIndex })),
+      if (!period || !rankType) continue
+
+      const etf: ETFGainerLoser = {
+        ticker: item.etf_ticker,
+        etf_ticker: item.etf_ticker,
+        issuer: item.issuer || 'Unknown',
+        etfLeverage: item.etfLeverage || '',
+        etfIndex: item.etfIndex || '',
+        aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum || 0,
+        return: typeof item.return === 'object' ? Number(item.return) : item.return || 0,
       }
+
+      if (rankType === 'gainer' && gainers[period]) {
+        gainers[period].push(etf)
+      } else if (rankType === 'loser' && losers[period]) {
+        losers[period].push(etf)
+      }
+    }
+
+    // Sort by rank and limit to top 10 for display
+    for (const period of periods) {
+      gainers[period] = gainers[period]
+        .sort((a, b) => b.return - a.return) // Descending: highest gains first
+        .slice(0, 10)
+      losers[period] = losers[period]
+        .sort((a, b) => a.return - b.return) // Ascending: lowest first (biggest losses)
+        .slice(0, 10)
     }
 
     res.status(200).json({
-      gainers: {
-        ch1w: getTopByPeriod('ch1w', 10).gainers,
-        ch1m: getTopByPeriod('ch1m', 10).gainers,
-        ch6m: getTopByPeriod('ch6m', 10).gainers,
-        ch1y: getTopByPeriod('ch1y', 10).gainers,
-        ch3y: getTopByPeriod('ch3y', 10).gainers,
-        ch5y: getTopByPeriod('ch5y', 10).gainers,
-        ch10y: getTopByPeriod('ch10y', 10).gainers,
-        chYTD: getTopByPeriod('chYTD', 10).gainers,
-      },
-      losers: {
-        ch1w: getTopByPeriod('ch1w', 10).losers,
-        ch1m: getTopByPeriod('ch1m', 10).losers,
-        ch6m: getTopByPeriod('ch6m', 10).losers,
-        ch1y: getTopByPeriod('ch1y', 10).losers,
-        ch3y: getTopByPeriod('ch3y', 10).losers,
-        ch5y: getTopByPeriod('ch5y', 10).losers,
-        ch10y: getTopByPeriod('ch10y', 10).losers,
-        chYTD: getTopByPeriod('chYTD', 10).losers,
-      },
+      gainers,
+      losers,
     })
   } catch (error) {
     console.error('Error fetching gainers/losers:', error)

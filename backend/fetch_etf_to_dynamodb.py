@@ -557,32 +557,76 @@ def save_gainers_and_losers(etf_data):
             for item in response.get('Items', []):
                 batch.delete_item(Key={'ticker': item['ticker']})
         
-        # Prepare gainers and losers data
-        gainers_losers = []
+        # Prepare all ETF performance data with uniform structure
+        all_etfs = []
         for ticker, data in etf_data.items():
-            gainers_losers.append({
+            all_etfs.append({
                 'ticker': ticker,
                 'issuer': data.get('issuer', 'Unknown'),
-                'aum': Decimal(str(data.get('aum', 0))) if data.get('aum') else Decimal('0'),
+                'etfLeverage': data.get('etfLeverage', ''),
+                'aum': float(data.get('aum', 0)) if data.get('aum') else 0,
                 'etfIndex': str(data.get('etfIndex', '')) if data.get('etfIndex') else '',
-                'ch1w': Decimal(str(data.get('ch1w', 0))) if data.get('ch1w') else Decimal('0'),
-                'ch1m': Decimal(str(data.get('ch1m', 0))) if data.get('ch1m') else Decimal('0'),
-                'ch6m': Decimal(str(data.get('ch6m', 0))) if data.get('ch6m') else Decimal('0'),
-                'ch1y': Decimal(str(data.get('ch1y', 0))) if data.get('ch1y') else Decimal('0'),
-                'ch3y': Decimal(str(data.get('ch3y', 0))) if data.get('ch3y') else Decimal('0'),
-                'ch5y': Decimal(str(data.get('ch5y', 0))) if data.get('ch5y') else Decimal('0'),
-                'ch10y': Decimal(str(data.get('ch10y', 0))) if data.get('ch10y') else Decimal('0'),
-                'chYTD': Decimal(str(data.get('chYTD', 0))) if data.get('chYTD') else Decimal('0'),
-                'timestamp': current_timestamp
+                'ch1w': float(data.get('ch1w', 0)) if data.get('ch1w') else 0,
+                'ch1m': float(data.get('ch1m', 0)) if data.get('ch1m') else 0,
+                'ch6m': float(data.get('ch6m', 0)) if data.get('ch6m') else 0,
+                'ch1y': float(data.get('ch1y', 0)) if data.get('ch1y') else 0,
+                'ch3y': float(data.get('ch3y', 0)) if data.get('ch3y') else 0,
+                'ch5y': float(data.get('ch5y', 0)) if data.get('ch5y') else 0,
+                'ch10y': float(data.get('ch10y', 0)) if data.get('ch10y') else 0,
+                'chYTD': float(data.get('chYTD', 0)) if data.get('chYTD') else 0,
             })
         
-        # Save all ETF performance data
+        # Helper function to get top 50 gainers and losers for a period
+        def get_top_50(period_key):
+            sorted_data = sorted(all_etfs, key=lambda x: x[period_key], reverse=True)
+            gainers = sorted_data[:50]
+            losers = sorted(sorted_data, key=lambda x: x[period_key])[:50]
+            return gainers, losers
+        
+        # Calculate top 50 gainers and losers for each period
+        periods = ['ch1w', 'ch1m', 'ch6m', 'ch1y', 'ch3y', 'ch5y', 'ch10y', 'chYTD']
+        gainers_losers_items = []
+        
+        for period in periods:
+            gainers, losers = get_top_50(period)
+            
+            for idx, etf in enumerate(gainers):
+                gainers_losers_items.append({
+                    'ticker': f"{period}#GAINER#{idx}",
+                    'period': period,
+                    'rank_type': 'gainer',
+                    'rank': idx + 1,
+                    'etf_ticker': etf['ticker'],
+                    'issuer': etf['issuer'],
+                    'etfLeverage': etf['etfLeverage'],
+                    'aum': Decimal(str(etf['aum'])),
+                    'etfIndex': etf['etfIndex'],
+                    'return': Decimal(str(etf[period])),
+                    'timestamp': current_timestamp
+                })
+            
+            for idx, etf in enumerate(losers):
+                gainers_losers_items.append({
+                    'ticker': f"{period}#LOSER#{idx}",
+                    'period': period,
+                    'rank_type': 'loser',
+                    'rank': idx + 1,
+                    'etf_ticker': etf['ticker'],
+                    'issuer': etf['issuer'],
+                    'etfLeverage': etf['etfLeverage'],
+                    'aum': Decimal(str(etf['aum'])),
+                    'etfIndex': etf['etfIndex'],
+                    'return': Decimal(str(etf[period])),
+                    'timestamp': current_timestamp
+                })
+        
+        # Save pre-computed gainers and losers
         with gainers_losers_table.batch_writer() as batch:
-            for item in gainers_losers:
+            for item in gainers_losers_items:
                 batch.put_item(Item=item)
         
-        logger.info(f"✓ Saved performance data for {len(gainers_losers)} ETFs")
-        return len(gainers_losers)
+        logger.info(f"✓ Saved top 50 gainers/losers for {len(periods)} periods ({len(gainers_losers_items)} total items)")
+        return len(gainers_losers_items)
         
     except Exception as e:
         logger.error(f"Failed to process gainers and losers: {e}")

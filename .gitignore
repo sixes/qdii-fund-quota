@@ -20,7 +20,7 @@ quota.json
 /.next/
 /out/
 
-.log
+*.log
 /backend/*.log
 
 # Python venv
@@ -28,4 +28,5 @@ quota.json
 */__pycache__/
 
 *.swp
+*.swo
 */*.swp

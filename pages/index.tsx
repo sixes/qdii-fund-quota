@@ -539,9 +539,10 @@ export default function Home() {
                       <tr>
                         <th className="text-left py-2 px-2">{language === 'en' ? 'Ticker' : '代码'}</th>
                         <th className="text-left py-2 px-2">{language === 'en' ? 'Issuer' : '发行商'}</th>
+                        <th className="text-left py-2 px-2">{language === 'en' ? 'Leverage Type' : '杠杆类型'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'Return' : '涨幅'}</th>
-                        <th className="text-right py-2 px-2">{language === 'en' ? 'Aum' : '规模'}</th>
-                        <th className="text-right py-2 px-2">{language === 'en' ? 'etfIndex' : '指数'}</th>
+                        <th className="text-right py-2 px-2">{language === 'en' ? 'AUM' : '规模'}</th>
+                        <th className="text-right py-2 px-2">{language === 'en' ? 'Index' : '指数'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -549,9 +550,10 @@ export default function Home() {
                         <tr key={idx} className="border-b hover:bg-green-50">
                           <td className="py-2 px-2 font-medium text-green-600">{etf.ticker}</td>
                           <td className="py-2 px-2 text-sm">{etf.issuer}</td>
+                          <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
                           <td className="py-2 px-2 text-right font-semibold text-green-600">+{etf.return.toFixed(2)}%</td>
-                          <td className="py-2 px-2 text-right font-semibold text-green-600">{etf.aum}</td>
-                          <td className="py-2 px-2 text-right font-semibold text-green-600">{etf.etfIndex}</td>
+                          <td className="py-2 px-2 text-right font-semibold text-green-600">{formatAssets(etf.aum)}</td>
+                          <td className="py-2 px-2 text-right text-sm text-gray-700">{etf.etfIndex}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -567,9 +569,10 @@ export default function Home() {
                       <tr>
                         <th className="text-left py-2 px-2">{language === 'en' ? 'Ticker' : '代码'}</th>
                         <th className="text-left py-2 px-2">{language === 'en' ? 'Issuer' : '发行商'}</th>
+                        <th className="text-left py-2 px-2">{language === 'en' ? 'Leverage Type' : '杠杆类型'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'Return' : '跌幅'}</th>
-                        <th className="text-right py-2 px-2">{language === 'en' ? 'Aum' : '规模'}</th>
-                        <th className="text-right py-2 px-2">{language === 'en' ? 'etfIndex' : '指数'}</th>
+                        <th className="text-right py-2 px-2">{language === 'en' ? 'AUM' : '规模'}</th>
+                        <th className="text-right py-2 px-2">{language === 'en' ? 'Index' : '指数'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -577,9 +580,10 @@ export default function Home() {
                         <tr key={idx} className="border-b hover:bg-red-50">
                           <td className="py-2 px-2 font-medium text-red-600">{etf.ticker}</td>
                           <td className="py-2 px-2 text-sm">{etf.issuer}</td>
+                          <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
                           <td className="py-2 px-2 text-right font-semibold text-red-600">{etf.return.toFixed(2)}%</td>
-                          <td className="py-2 px-2 text-right font-semibold text-green-600">{etf.aum}</td>
-                          <td className="py-2 px-2 text-right font-semibold text-green-600">{etf.etfIndex}</td>
+                          <td className="py-2 px-2 text-right text-gray-700">{formatAssets(etf.aum)}</td>
+                          <td className="py-2 px-2 text-right text-sm text-gray-700">{etf.etfIndex}</td>
                         </tr>
                       ))}
                     </tbody>
