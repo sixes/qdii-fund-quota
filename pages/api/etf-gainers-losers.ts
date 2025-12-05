@@ -7,6 +7,8 @@ const client = new DynamoDBClient({ region: 'us-east-1' })
 interface ETFPerformance {
   ticker: string
   issuer: string
+  etfIndex: string
+  aum: number
   ch1w: number
   ch1m: number
   ch6m: number
@@ -27,8 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!data.Items || data.Items.length === 0) {
       return res.status(200).json({
-        gainers: { ch1w: [], ch1m: [], ch6m: [], ch1y: [], ch3y: [], ch5y: [], ch10y: [], chYTD: [] },
-        losers: { ch1w: [], ch1m: [], ch6m: [], ch1y: [], ch3y: [], ch5y: [], ch10y: [], chYTD: [] },
+        gainers: { ticker: [], issuer: [], etfIndex: [], ch1w: [], ch1m: [], ch6m: [], ch1y: [], ch3y: [], ch5y: [], ch10y: [], chYTD: [] },
+        losers: { ticker: [], issuer: [], etfIndex: [], ch1w: [], ch1m: [], ch6m: [], ch1y: [], ch3y: [], ch5y: [], ch10y: [], chYTD: [] },
       })
     }
 
@@ -37,6 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return {
         ticker: item.ticker,
         issuer: item.issuer || 'Unknown',
+        etfIndex: item.etfIndex,
+        aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum|| 0,
         ch1w: typeof item.ch1w === 'object' ? Number(item.ch1w) : item.ch1w || 0,
         ch1m: typeof item.ch1m === 'object' ? Number(item.ch1m) : item.ch1m || 0,
         ch6m: typeof item.ch6m === 'object' ? Number(item.ch6m) : item.ch6m || 0,
@@ -49,11 +53,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Function to get top gainers and losers for a period
-    const getTopByPeriod = (period: keyof Omit<ETFPerformance, 'ticker' | 'issuer'>, limit: number = 10) => {
-      const sorted = [...etfs].sort((a, b) => b[period] - a[period])
+    const getTopByPeriod = (period: keyof Omit<ETFPerformance, 'ticker' | 'issuer' | 'etfIndex'>, limit: number = 10) => {
+      const sorted = [...etfs].sort((a, b) => (b[period] as number) - (a[period] as number))
       return {
-        gainers: sorted.slice(0, limit).map(e => ({ ticker: e.ticker, issuer: e.issuer, return: e[period] })),
-        losers: sorted.slice(-limit).reverse().map(e => ({ ticker: e.ticker, issuer: e.issuer, return: e[period] })),
+        gainers: sorted.slice(0, limit).map(e => ({ ticker: e.ticker, issuer: e.issuer, return: e[period], aum: e.aum, etfIndex: e.etfIndex })),
+        losers: sorted.slice(-limit).reverse().map(e => ({ ticker: e.ticker, issuer: e.issuer, return: e[period], aum: e.aum, etfIndex: e.etfIndex })),
       }
     }
 

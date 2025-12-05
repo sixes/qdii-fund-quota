@@ -563,6 +563,8 @@ def save_gainers_and_losers(etf_data):
             gainers_losers.append({
                 'ticker': ticker,
                 'issuer': data.get('issuer', 'Unknown'),
+                'aum': Decimal(str(data.get('aum', 0))) if data.get('aum') else Decimal('0'),
+                'etfIndex': str(data.get('etfIndex', '')) if data.get('etfIndex') else '',
                 'ch1w': Decimal(str(data.get('ch1w', 0))) if data.get('ch1w') else Decimal('0'),
                 'ch1m': Decimal(str(data.get('ch1m', 0))) if data.get('ch1m') else Decimal('0'),
                 'ch6m': Decimal(str(data.get('ch6m', 0))) if data.get('ch6m') else Decimal('0'),
@@ -819,14 +821,6 @@ def main():
         delisted_table = create_delisted_etfs_table()
         new_launch_table = create_new_launch_etfs_table()
         gainers_losers_table = create_gainers_losers_table()
-
-        # Wait for tables to be fully active
-        logger.info("Waiting for tables to be fully active...")
-        table.wait_until_exists()
-        stats_table.wait_until_exists()
-        delisted_table.wait_until_exists()
-        new_launch_table.wait_until_exists()
-        gainers_losers_table.wait_until_exists()
 
         # Step 2: Fetch existing ETF tickers before API call
         existing_tickers = fetch_existing_etf_tickers()
