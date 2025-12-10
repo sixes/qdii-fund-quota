@@ -75,7 +75,7 @@ export default function Home() {
   const [delistedETFs, setDelistedETFs] = useState<any[]>([]);
   const [newLaunchETFs, setNewLaunchETFs] = useState<any[]>([]);
   const [gainersLosers, setGainersLosers] = useState<any>(null);
-  const [selectedGainersLosersPeriode, setSelectedGainersLosersPeriod] = useState<'ch1w' | 'ch1m' | 'ch6m' | 'ch1y' | 'ch3y' | 'ch5y' | 'ch10y' | 'chYTD'>('ch1m');
+  const [selectedGainersLosersPeriode, setSelectedGainersLosersPeriod] = useState<'ch1w' | 'ch1m' | 'ch6m' | 'ch1y' | 'ch3y' | 'ch5y' | 'ch10y' | 'chYTD'>('chYTD');
 
   // Prominent issuers for quick filter
   const prominentIssuers = ['Direxion', 'ProShares', 'GraniteShares', 'BlackRock', 'Vanguard', 'State Street', 'Invesco', 'Charles Schwab', 'JPMorgan Chase'];
@@ -538,22 +538,22 @@ export default function Home() {
                     <thead className="sticky top-0 bg-gray-50">
                       <tr>
                         <th className="text-left py-2 px-2">{language === 'en' ? 'Ticker' : '代码'}</th>
-                        <th className="text-left py-2 px-2">{language === 'en' ? 'Issuer' : '发行商'}</th>
-                        <th className="text-left py-2 px-2">{language === 'en' ? 'Leverage Type' : '杠杆类型'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'Return' : '涨幅'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'AUM' : '规模'}</th>
+                        <th className="text-left py-2 px-2">{language === 'en' ? 'Leverage' : '杠杆类型'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'Index' : '指数'}</th>
+                        <th className="text-left py-2 px-2">{language === 'en' ? 'Issuer' : '发行商'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {gainersLosers.gainers[selectedGainersLosersPeriode]?.slice(0, 10).map((etf: any, idx: number) => (
                         <tr key={idx} className="border-b hover:bg-green-50">
                           <td className="py-2 px-2 font-medium text-green-600">{etf.ticker}</td>
-                          <td className="py-2 px-2 text-sm">{etf.issuer}</td>
-                          <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
                           <td className="py-2 px-2 text-right font-semibold text-green-600">+{etf.return.toFixed(2)}%</td>
                           <td className="py-2 px-2 text-right font-semibold text-green-600">{formatAssets(etf.aum)}</td>
+                          <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
                           <td className="py-2 px-2 text-right text-sm text-gray-700">{etf.etfIndex}</td>
+                          <td className="py-2 px-2 text-sm">{etf.issuer}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -568,22 +568,22 @@ export default function Home() {
                     <thead className="sticky top-0 bg-gray-50">
                       <tr>
                         <th className="text-left py-2 px-2">{language === 'en' ? 'Ticker' : '代码'}</th>
-                        <th className="text-left py-2 px-2">{language === 'en' ? 'Issuer' : '发行商'}</th>
-                        <th className="text-left py-2 px-2">{language === 'en' ? 'Leverage Type' : '杠杆类型'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'Return' : '跌幅'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'AUM' : '规模'}</th>
+                        <th className="text-left py-2 px-2">{language === 'en' ? 'Leverage' : '杠杆类型'}</th>
                         <th className="text-right py-2 px-2">{language === 'en' ? 'Index' : '指数'}</th>
+                        <th className="text-left py-2 px-2">{language === 'en' ? 'Issuer' : '发行商'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {gainersLosers.losers[selectedGainersLosersPeriode]?.slice(0, 10).map((etf: any, idx: number) => (
                         <tr key={idx} className="border-b hover:bg-red-50">
                           <td className="py-2 px-2 font-medium text-red-600">{etf.ticker}</td>
-                          <td className="py-2 px-2 text-sm">{etf.issuer}</td>
-                          <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
                           <td className="py-2 px-2 text-right font-semibold text-red-600">{etf.return.toFixed(2)}%</td>
                           <td className="py-2 px-2 text-right text-gray-700">{formatAssets(etf.aum)}</td>
+                          <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
                           <td className="py-2 px-2 text-right text-sm text-gray-700">{etf.etfIndex}</td>
+                          <td className="py-2 px-2 text-sm">{etf.issuer}</td>
                         </tr>
                       ))}
                     </tbody>

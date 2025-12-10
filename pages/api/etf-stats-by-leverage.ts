@@ -1,27 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, ScanCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, QueryCommand, ScanCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 const client = new DynamoDBClient({ region: 'us-east-1' })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const params = {
-      TableName: 'ETFMarketStats',
-      FilterExpression: 'begins_with(pk, :pkPrefix)',
-      ExpressionAttributeValues: {
-        ':pkPrefix': { S: 'LEVERAGE#' },
-      },
-    }
-
-    const data = await client.send(new ScanCommand(params))
-
-    if (!data.Items || data.Items.length === 0) {
-      return res.status(200).json({ leverageStats: [], issuerByLeverage: {} })
-    }
+    // Query all leverage type statistics (each leverage type has its own partition)
+    const leverageResponse = await client.send(
+      new ScanCommand({
+        TableName: 'ETFMarketStats',
+        FilterExpression: 'begins_with(pk, :pkPrefix) AND sk = :sk',
+        ExpressionAttributeValues: {
+          ':pkPrefix': { S: 'LEVERAGE#' },
+          ':sk': { S: 'STATS' },
+        },
+      })
+    )
 
     // Process leverage stats
-    const leverageStats = data.Items.map(dbItem => {
+    const leverageStats = (leverageResponse.Items || []).map(dbItem => {
       const item = unmarshall(dbItem)
       return {
         leverageType: item.leverageType || item.pk.replace('LEVERAGE#', ''),
@@ -42,24 +40,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (type.includes('2X')) return isShort ? -2 : 2
         if (type.includes('0.5X')) return isShort ? -0.5 : 0.5
         if (type === '-1X Short' || type === '-1X') return -1
-        if (type === 'Long') return 1
+        if (type === 'Long' || type === 'Unlevered') return 1
         return 0
       }
       return getLeverageValue(b.leverageType) - getLeverageValue(a.leverageType)
     })
 
-    // Fetch issuer-leverage data
-    const issuerParams = {
-      TableName: 'ETFMarketStats',
-      FilterExpression: 'begins_with(pk, :pkPrefix) AND begins_with(sk, :skPrefix)',
-      ExpressionAttributeValues: {
-        ':pkPrefix': { S: 'ISSUER#' },
-        ':skPrefix': { S: 'LEVERAGE#' },
-      },
-    }
+    // Query for issuer-leverage data by partition key
+    const issuerLeverageResponse = await client.send(
+      new ScanCommand({
+        TableName: 'ETFMarketStats',
+        FilterExpression: 'begins_with(pk, :pkPrefix) AND begins_with(sk, :skPrefix)',
+        ExpressionAttributeValues: {
+          ':pkPrefix': { S: 'ISSUER#' },
+          ':skPrefix': { S: 'LEVERAGE#' },
+        },
+      })
+    )
 
-    const issuerData = await client.send(new ScanCommand(issuerParams))
-    
     // Organize issuer data by leverage type
     const issuerByLeverage: {
       [leverageType: string]: Array<{
@@ -69,15 +67,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }>
     } = {}
 
-    if (issuerData.Items) {
-      issuerData.Items.forEach(dbItem => {
+    if (issuerLeverageResponse.Items) {
+      issuerLeverageResponse.Items.forEach(dbItem => {
         const item = unmarshall(dbItem)
         const leverageType = item.sk.replace('LEVERAGE#', '')
-        
+
         if (!issuerByLeverage[leverageType]) {
           issuerByLeverage[leverageType] = []
         }
-        
+
         issuerByLeverage[leverageType].push({
           issuer: item.issuer,
           aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum,

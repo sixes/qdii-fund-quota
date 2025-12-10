@@ -6,8 +6,13 @@ const client = new DynamoDBClient({ region: 'us-east-1' })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Scan ETFMarketStats for leverage type statistics with filter
     const params = {
-      TableName: 'ETFData',
+      TableName: 'ETFMarketStats',
+      FilterExpression: 'begins_with(pk, :prefix)',
+      ExpressionAttributeValues: {
+        ':prefix': { S: 'LEVERAGE#' },
+      },
     }
 
     const data = await client.send(new ScanCommand(params))
@@ -16,61 +21,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ summary: [] })
     }
 
-    // Process and group by leverage type
-    const leverageGroups: { [key: string]: any[] } = {}
-
-    data.Items.forEach(dbItem => {
+    // Process and convert leverage statistics
+    const summary = data.Items.map(dbItem => {
       const item = unmarshall(dbItem)
-      const leverageType = item.etfLeverage || 'Unknown'
-
-      if (!leverageGroups[leverageType]) {
-        leverageGroups[leverageType] = []
-      }
-
-      leverageGroups[leverageType].push({
-        ticker: item.ticker,
-        assets: item.assets ? Number(item.assets) : 0,
-        ch1m: item.ch1m ? Number(item.ch1m) : null,
-        chYTD: item.chYTD ? Number(item.chYTD) : null,
-        ch1y: item.ch1y ? Number(item.ch1y) : null,
-      })
-    })
-
-    // Calculate summary statistics for each leverage type
-    const summary = Object.keys(leverageGroups).map(leverageType => {
-      const etfs = leverageGroups[leverageType]
-      const count = etfs.length
-      const totalAssets = etfs.reduce((sum, etf) => sum + etf.assets, 0)
-
-      // Calculate average performance (excluding null values)
-      const validCh1m = etfs.filter(e => e.ch1m !== null).map(e => e.ch1m)
-      const validChYTD = etfs.filter(e => e.chYTD !== null).map(e => e.chYTD)
-      const validCh1y = etfs.filter(e => e.ch1y !== null).map(e => e.ch1y)
-
-      const avgCh1m = validCh1m.length > 0
-        ? validCh1m.reduce((sum, val) => sum + val, 0) / validCh1m.length
-        : null
-      const avgChYTD = validChYTD.length > 0
-        ? validChYTD.reduce((sum, val) => sum + val, 0) / validChYTD.length
-        : null
-      const avgCh1y = validCh1y.length > 0
-        ? validCh1y.reduce((sum, val) => sum + val, 0) / validCh1y.length
-        : null
+      const leverageType = item.leverageType || item.pk.replace('LEVERAGE#', '')
 
       // Sort by leverage multiplier for display order
       let sortOrder = 0
       if (leverageType.includes('3X')) sortOrder = leverageType.includes('-') ? -3 : 3
       else if (leverageType.includes('2X')) sortOrder = leverageType.includes('-') ? -2 : 2
       else if (leverageType.includes('-1X')) sortOrder = -1
-      else if (leverageType === 'Long') sortOrder = 1
+      else if (leverageType === 'Long' || leverageType === 'Unlevered') sortOrder = 1
 
       return {
         leverageType,
-        count,
-        totalAssets,
-        avgCh1m,
-        avgChYTD,
-        avgCh1y,
+        count: Number(item.count) || 0,
+        totalAssets: typeof item.aum === 'object' ? Number(item.aum) : item.aum || 0,
+        avgCh1m: null, // Summary stats not available in this table
+        avgChYTD: null,
+        avgCh1y: null,
         sortOrder,
       }
     })

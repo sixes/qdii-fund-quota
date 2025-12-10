@@ -6,8 +6,14 @@ const client = new DynamoDBClient({ region: 'us-east-1' })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Scan ETFMarketStats for issuer list with filter
+    // pk starts with "ISSUER#", sk = "STATS"
     const params = {
-      TableName: 'ETFData',
+      TableName: 'ETFMarketStats',
+      FilterExpression: 'begins_with(pk, :prefix)',
+      ExpressionAttributeValues: {
+        ':prefix': { S: 'ISSUER#' },
+      },
       ProjectionExpression: 'issuer',
     }
 
@@ -17,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ issuers: [] })
     }
 
-    // Get unique issuers
+    // Extract unique issuers
     const issuersSet = new Set<string>()
     data.Items.forEach(dbItem => {
       const item = unmarshall(dbItem)

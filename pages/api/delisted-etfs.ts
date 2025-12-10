@@ -1,17 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 const client = new DynamoDBClient({ region: 'us-east-1' })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Use Query with partition key 'DELISTED_ETFS' for efficient access
     const params = {
       TableName: 'DelistedETFs',
-      Limit: 20,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: {
+        ':pk': { S: 'DELISTED_ETFS' }
+      },
+      ScanIndexForward: false  // Sort by sk in descending order (most recent first)
     }
 
-    const data = await client.send(new ScanCommand(params))
+    const data = await client.send(new QueryCommand(params))
 
     if (!data.Items || data.Items.length === 0) {
       return res.status(200).json({ delistedETFs: [] })
@@ -29,9 +34,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         etfIndex: item.etfIndex || '',
         assetClass: item.assetClass || '',
       }
-    }).sort((a, b) => {
-      // Sort by delisted date (newest first)
-      return new Date(b.delistedDate).getTime() - new Date(a.delistedDate).getTime()
     })
 
     res.status(200).json({ delistedETFs })

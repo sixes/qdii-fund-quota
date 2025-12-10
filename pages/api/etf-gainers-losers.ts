@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 const client = new DynamoDBClient({ region: 'us-east-1' })
@@ -20,51 +20,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const gainers: Record<string, ETFGainerLoser[]> = {}
     const losers: Record<string, ETFGainerLoser[]> = {}
 
-    // Fetch all pre-computed gainers and losers data
-    const scanParams = {
-      TableName: 'ETFGainersLosers',
-    }
-
-    const data = await client.send(new ScanCommand(scanParams))
-    const items = (data.Items || []).map(item => unmarshall(item))
-
-    // Initialize arrays for each period
+    // Query each period's gainers and losers using partition key
     for (const period of periods) {
+      const queryParams = {
+        TableName: 'ETFGainersLosers',
+        KeyConditionExpression: 'pk = :pk',
+        ExpressionAttributeValues: {
+          ':pk': { S: `PERIOD#${period}` }
+        }
+      }
+
+      const response = await client.send(new QueryCommand(queryParams))
+      const items = (response.Items || []).map(item => unmarshall(item))
+
+      // Initialize arrays
       gainers[period] = []
       losers[period] = []
-    }
 
-    // Organize items by period and type
-    for (const item of items) {
-      const period = item.period
-      const rankType = item.rank_type
+      // Separate and organize gainers and losers
+      for (const item of items) {
+        const etf: ETFGainerLoser = {
+          ticker: item.etf_ticker,
+          etf_ticker: item.etf_ticker,
+          issuer: item.issuer || 'Unknown',
+          etfLeverage: item.etfLeverage || '',
+          etfIndex: item.etfIndex || '',
+          aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum || 0,
+          return: typeof item.return === 'object' ? Number(item.return) : item.return || 0,
+        }
 
-      if (!period || !rankType) continue
-
-      const etf: ETFGainerLoser = {
-        ticker: item.etf_ticker,
-        etf_ticker: item.etf_ticker,
-        issuer: item.issuer || 'Unknown',
-        etfLeverage: item.etfLeverage || '',
-        etfIndex: item.etfIndex || '',
-        aum: typeof item.aum === 'object' ? Number(item.aum) : item.aum || 0,
-        return: typeof item.return === 'object' ? Number(item.return) : item.return || 0,
+        if (item.rank_type === 'gainer') {
+          gainers[period].push(etf)
+        } else if (item.rank_type === 'loser') {
+          losers[period].push(etf)
+        }
       }
 
-      if (rankType === 'gainer' && gainers[period]) {
-        gainers[period].push(etf)
-      } else if (rankType === 'loser' && losers[period]) {
-        losers[period].push(etf)
-      }
-    }
-
-    // Sort by rank and limit to top 10 for display
-    for (const period of periods) {
+      // Sort by return value (descending for gainers, ascending for losers) and limit to top 10
       gainers[period] = gainers[period]
-        .sort((a, b) => b.return - a.return) // Descending: highest gains first
+        .sort((a, b) => b.return - a.return)
         .slice(0, 10)
       losers[period] = losers[period]
-        .sort((a, b) => a.return - b.return) // Ascending: lowest first (biggest losses)
+        .sort((a, b) => a.return - b.return)
         .slice(0, 10)
     }
 

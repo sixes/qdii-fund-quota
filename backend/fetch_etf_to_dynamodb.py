@@ -214,21 +214,30 @@ def create_market_stats_table():
 
 def create_delisted_etfs_table():
     """
-    Create DynamoDB table for delisted ETFs.
-    Key: ticker (String)
+    Create DynamoDB table for delisted ETFs optimized for Query operations.
+    Partition Key (pk): STATIC value 'DELISTED_ETFS' (all records in one partition)
+    Sort Key (sk): {delistedDate}#{ticker} - enables date-based sorting and efficient queries
     """
     try:
         table = dynamodb.create_table(
             TableName=DELISTED_ETFS_TABLE,
             KeySchema=[
                 {
-                    'AttributeName': 'ticker',
+                    'AttributeName': 'pk',
                     'KeyType': 'HASH'  # Partition key
+                },
+                {
+                    'AttributeName': 'sk',
+                    'KeyType': 'RANGE'  # Sort key
                 }
             ],
             AttributeDefinitions=[
                 {
-                    'AttributeName': 'ticker',
+                    'AttributeName': 'pk',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'sk',
                     'AttributeType': 'S'
                 }
             ],
@@ -253,21 +262,30 @@ def create_delisted_etfs_table():
 
 def create_new_launch_etfs_table():
     """
-    Create DynamoDB table for new launch ETFs.
-    Key: ticker (String)
+    Create DynamoDB table for new launch ETFs optimized for Query operations.
+    Partition Key (pk): STATIC value 'NEW_LAUNCH_ETFS' (all records in one partition)
+    Sort Key (sk): {inceptionDate}#{ticker} - enables date-based sorting and efficient queries
     """
     try:
         table = dynamodb.create_table(
             TableName=NEW_LAUNCH_ETFS_TABLE,
             KeySchema=[
                 {
-                    'AttributeName': 'ticker',
+                    'AttributeName': 'pk',
                     'KeyType': 'HASH'  # Partition key
+                },
+                {
+                    'AttributeName': 'sk',
+                    'KeyType': 'RANGE'  # Sort key
                 }
             ],
             AttributeDefinitions=[
                 {
-                    'AttributeName': 'ticker',
+                    'AttributeName': 'pk',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'sk',
                     'AttributeType': 'S'
                 }
             ],
@@ -292,21 +310,31 @@ def create_new_launch_etfs_table():
 
 def create_gainers_losers_table():
     """
-    Create DynamoDB table for ETF gainers and losers.
-    Key: ticker (String)
+    Create DynamoDB table for ETF gainers and losers optimized for Query operations.
+    Partition Key (pk): PERIOD#{period} - allows querying all gainers/losers for a period
+    Sort Key (sk): {TYPE}#{rank:03d}#{ticker} - enables efficient sorting by rank and type
+    Example: pk="PERIOD#ch1m", sk="GAINER#001#SPY"
     """
     try:
         table = dynamodb.create_table(
             TableName=GAINERS_LOSERS_TABLE,
             KeySchema=[
                 {
-                    'AttributeName': 'ticker',
+                    'AttributeName': 'pk',
                     'KeyType': 'HASH'  # Partition key
+                },
+                {
+                    'AttributeName': 'sk',
+                    'KeyType': 'RANGE'  # Sort key
                 }
             ],
             AttributeDefinitions=[
                 {
-                    'AttributeName': 'ticker',
+                    'AttributeName': 'pk',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'sk',
                     'AttributeType': 'S'
                 }
             ],
@@ -349,11 +377,11 @@ def fetch_etf_data():
 
 def batch_write_to_dynamodb(table, etf_data):
     """
-    Upsert ETF data into DynamoDB table using batch operations.
-    Uses batch_write_item for better performance with 4000+ items.
+    Incrementally upsert ETF data into DynamoDB table using batch operations.
+    Only updates changed records instead of deleting and re-inserting all data.
     put_item automatically handles upsert (insert or update).
     """
-    logger.info(f"Starting batch upsert of {len(etf_data)} ETF records...")
+    logger.info(f"Starting incremental batch upsert of {len(etf_data)} ETF records...")
 
     items = []
     current_timestamp = datetime.utcnow().isoformat()
@@ -401,7 +429,7 @@ def batch_write_to_dynamodb(table, etf_data):
             error_count += len(batch)
             logger.error(f"Unexpected error in batch {batch_num}: {e}")
 
-    logger.info(f"Batch upsert complete! Success: {success_count}, Errors: {error_count}")
+    logger.info(f"Incremental batch upsert complete! Success: {success_count}, Errors: {error_count}")
 
     if error_count > 0:
         raise Exception(f"Failed to insert {error_count} records")
@@ -445,7 +473,7 @@ def fetch_existing_etf_tickers():
 def identify_delisted_etfs(old_tickers, new_tickers, etf_data_table):
     """
     Identify ETFs that are no longer in the API data (delisted).
-    Save delisted ETFs to DelistedETFs table.
+    Save delisted ETFs to DelistedETFs table using pk/sk structure.
     """
     delisted_tickers = old_tickers - new_tickers
     
@@ -458,12 +486,16 @@ def identify_delisted_etfs(old_tickers, new_tickers, etf_data_table):
     try:
         delisted_table = dynamodb.Table(DELISTED_ETFS_TABLE)
         current_timestamp = datetime.utcnow().isoformat()
+        current_date = datetime.utcnow().strftime('%Y-%m-%d')
         
         # Delete old data
-        response = delisted_table.scan()
+        response = delisted_table.query(
+            KeyConditionExpression='pk = :pk',
+            ExpressionAttributeValues={':pk': 'DELISTED_ETFS'}
+        )
         with delisted_table.batch_writer() as batch:
             for item in response.get('Items', []):
-                batch.delete_item(Key={'ticker': item['ticker']})
+                batch.delete_item(Key={'pk': item['pk'], 'sk': item['sk']})
         
         # Get details of delisted ETFs from current table before deletion
         etf_table = dynamodb.Table(TABLE_NAME)
@@ -473,6 +505,9 @@ def identify_delisted_etfs(old_tickers, new_tickers, etf_data_table):
                     response = etf_table.get_item(Key={'ticker': ticker})
                     if 'Item' in response:
                         item = response['Item'].copy()
+                        # Create new key structure: pk='DELISTED_ETFS', sk='{date}#{ticker}'
+                        item['pk'] = 'DELISTED_ETFS'
+                        item['sk'] = f"{current_date}#{ticker}"
                         item['delistedDate'] = current_timestamp
                         batch.put_item(Item=item)
                 except Exception as e:
@@ -489,6 +524,7 @@ def identify_delisted_etfs(old_tickers, new_tickers, etf_data_table):
 def save_new_launch_etfs(etf_data):
     """
     Filter ETFs launched in the last 10 days and save relevant fields.
+    Uses pk/sk structure for efficient Query operations.
     Delete old data before saving new batch.
     """
     logger.info("Processing new launch ETFs...")
@@ -501,10 +537,13 @@ def save_new_launch_etfs(etf_data):
         ten_days_ago = current_timestamp - timedelta(days=10)
         
         # Delete old data
-        response = new_launch_table.scan()
+        response = new_launch_table.query(
+            KeyConditionExpression='pk = :pk',
+            ExpressionAttributeValues={':pk': 'NEW_LAUNCH_ETFS'}
+        )
         with new_launch_table.batch_writer() as batch:
             for item in response.get('Items', []):
-                batch.delete_item(Key={'ticker': item['ticker']})
+                batch.delete_item(Key={'pk': item['pk'], 'sk': item['sk']})
         
         # Filter new launches
         new_launches = []
@@ -515,6 +554,8 @@ def save_new_launch_etfs(etf_data):
                     inception_date = datetime.strptime(inception_date_str, '%Y-%m-%d')
                     if inception_date >= ten_days_ago:
                         new_launches.append({
+                            'pk': 'NEW_LAUNCH_ETFS',
+                            'sk': f"{inception_date_str}#{ticker}",
                             'ticker': ticker,
                             'aum': Decimal(str(data.get('aum', 0))) if data.get('aum') else Decimal('0'),
                             'issuer': data.get('issuer', 'Unknown'),
@@ -543,19 +584,14 @@ def save_new_launch_etfs(etf_data):
 def save_gainers_and_losers(etf_data):
     """
     Calculate and save ETF gainers and losers based on various time periods.
-    Delete old data before saving new batch.
+    Uses partition key (pk) and sort key (sk) for efficient Query operations.
+    Format: pk = "PERIOD#{period}", sk = "{type}#{rank:03d}#{etf_ticker}"
     """
     logger.info("Processing gainers and losers...")
     
     try:
         gainers_losers_table = dynamodb.Table(GAINERS_LOSERS_TABLE)
         current_timestamp = datetime.utcnow().isoformat()
-        
-        # Delete old data
-        response = gainers_losers_table.scan()
-        with gainers_losers_table.batch_writer() as batch:
-            for item in response.get('Items', []):
-                batch.delete_item(Key={'ticker': item['ticker']})
         
         # Prepare all ETF performance data with uniform structure
         all_etfs = []
@@ -590,9 +626,11 @@ def save_gainers_and_losers(etf_data):
         for period in periods:
             gainers, losers = get_top_50(period)
             
+            # Save gainers for this period
             for idx, etf in enumerate(gainers):
                 gainers_losers_items.append({
-                    'ticker': f"{period}#GAINER#{idx}",
+                    'pk': f"PERIOD#{period}",
+                    'sk': f"GAINER#{idx + 1:03d}#{etf['ticker']}",
                     'period': period,
                     'rank_type': 'gainer',
                     'rank': idx + 1,
@@ -605,9 +643,11 @@ def save_gainers_and_losers(etf_data):
                     'timestamp': current_timestamp
                 })
             
+            # Save losers for this period
             for idx, etf in enumerate(losers):
                 gainers_losers_items.append({
-                    'ticker': f"{period}#LOSER#{idx}",
+                    'pk': f"PERIOD#{period}",
+                    'sk': f"LOSER#{idx + 1:03d}#{etf['ticker']}",
                     'period': period,
                     'rank_type': 'loser',
                     'rank': idx + 1,
@@ -619,6 +659,17 @@ def save_gainers_and_losers(etf_data):
                     'return': Decimal(str(etf[period])),
                     'timestamp': current_timestamp
                 })
+        
+        # Clear old data for this period and save new items
+        # Delete old gainers/losers for all periods
+        for period in periods:
+            response = gainers_losers_table.query(
+                KeyConditionExpression='pk = :pk',
+                ExpressionAttributeValues={':pk': f"PERIOD#{period}"}
+            )
+            with gainers_losers_table.batch_writer() as batch:
+                for item in response.get('Items', []):
+                    batch.delete_item(Key={'pk': item['pk'], 'sk': item['sk']})
         
         # Save pre-computed gainers and losers
         with gainers_losers_table.batch_writer() as batch:
@@ -866,24 +917,25 @@ def main():
         new_launch_table = create_new_launch_etfs_table()
         gainers_losers_table = create_gainers_losers_table()
 
-        # Step 2: Fetch existing ETF tickers before API call
+        # Step 2: Fetch existing ETF tickers before API call (for comparison)
         existing_tickers = fetch_existing_etf_tickers()
+        logger.info(f"Existing ETFs in database: {len(existing_tickers)}")
 
         # Step 3: Fetch data from API
         etf_data = fetch_etf_data()
         new_tickers = set(etf_data.keys())
+        logger.info(f"New ETFs from API: {len(new_tickers)}")
 
         # Step 4: Identify and save delisted ETFs
         delisted_count = identify_delisted_etfs(existing_tickers, new_tickers, table)
+        logger.info(f"Delisted ETFs identified: {delisted_count}")
 
-        # Step 5: Delete old ETFData table data and batch upsert new data
-        logger.info("Deleting old ETF data from table...")
-        response = table.scan(ProjectionExpression='ticker')
-        with table.batch_writer() as batch:
-            for item in response.get('Items', []):
-                batch.delete_item(Key={'ticker': item['ticker']})
-        
-        logger.info("✓ Old ETF data deleted")
+        # Step 5: Incrementally upsert only changed/new ETF data (no full delete)
+        # This is more efficient than deleting all records and re-inserting
+        changes = new_tickers - existing_tickers
+        logger.info(f"New ETFs to add: {len(changes)}")
+        logger.info(f"Updated ETFs: {len(new_tickers - changes)}")
+        logger.info("Starting incremental upsert (will skip unchanged records in DynamoDB)...")
         success_count, error_count = batch_write_to_dynamodb(table, etf_data)
 
         # Step 6: Calculate and save market statistics

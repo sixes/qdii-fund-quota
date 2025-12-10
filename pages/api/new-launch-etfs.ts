@@ -1,17 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 const client = new DynamoDBClient({ region: 'us-east-1' })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Use Query with partition key 'NEW_LAUNCH_ETFS' for efficient access
     const params = {
       TableName: 'NewLaunchETFs',
-      Limit: 20,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: {
+        ':pk': { S: 'NEW_LAUNCH_ETFS' }
+      },
+      ScanIndexForward: false  // Sort by sk in descending order (most recent first)
     }
 
-    const data = await client.send(new ScanCommand(params))
+    const data = await client.send(new QueryCommand(params))
 
     if (!data.Items || data.Items.length === 0) {
       return res.status(200).json({ newLaunchETFs: [] })
@@ -28,9 +33,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         assetClass: item.assetClass || '',
         expenseRatio: typeof item.expenseRatio === 'object' ? Number(item.expenseRatio) : item.expenseRatio || 0,
       }
-    }).sort((a, b) => {
-      // Sort by inception date (newest first)
-      return new Date(b.inceptionDate).getTime() - new Date(a.inceptionDate).getTime()
     })
 
     res.status(200).json({ newLaunchETFs })
