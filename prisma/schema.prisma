@@ -20,3 +20,121 @@ model FundQuota {
 
   @@map("fund_quota")
 }
+
+model ETFData {
+  id                 Int      @id @default(autoincrement())
+  ticker             String   @unique
+  etfLeverage        String?
+  issuer             String?
+  aum                Decimal? @db.Decimal(20, 2)
+  assetClass        String?
+  expenseRatio      Decimal? @db.Decimal(8, 4)
+  peRatio           Decimal? @db.Decimal(15, 4)
+  price             Decimal? @db.Decimal(15, 2)
+  volume            BigInt?
+  ch1w              Decimal? @db.Decimal(12, 4)
+  ch1m              Decimal? @db.Decimal(12, 4)
+  ch6m              Decimal? @db.Decimal(12, 4)
+  chYTD             Decimal? @db.Decimal(12, 4)
+  ch1y              Decimal? @db.Decimal(12, 4)
+  ch3y              Decimal? @db.Decimal(12, 4)
+  ch5y              Decimal? @db.Decimal(12, 4)
+  ch10y             Decimal? @db.Decimal(12, 4)
+  high52            Decimal? @db.Decimal(15, 2)
+  low52             Decimal? @db.Decimal(15, 2)
+  allTimeLow        Decimal? @db.Decimal(15, 2)
+  allTimeLowChange  Decimal? @db.Decimal(12, 4)
+  allTimeHigh       Decimal? @db.Decimal(15, 2)
+  allTimeHighChange Decimal? @db.Decimal(12, 4)
+  allTimeHighDate   String?
+  allTimeLowDate    String?
+  etfIndex          String?
+  inceptionDate     String?
+  lastUpdated       DateTime @default(now()) @updatedAt
+
+  @@index([etfLeverage])
+  @@index([issuer])
+  @@map("etf_data")
+}
+
+model DelistedETF {
+  id            Int      @id @default(autoincrement())
+  ticker        String
+  delistedDate  DateTime @default(now())
+  etfLeverage   String?
+  issuer        String?
+  aum           Decimal? @db.Decimal(15, 2)
+  assetClass   String?
+  expenseRatio Decimal? @db.Decimal(5, 3)
+  etfIndex      String?
+  
+  @@unique([ticker, delistedDate])
+  @@index([delistedDate])
+  @@map("delisted_etfs")
+}
+
+model NewLaunchETF {
+  id            Int      @id @default(autoincrement())
+  ticker        String
+  issuer        String?
+  inceptionDate String
+  aum           Decimal? @db.Decimal(15, 2)
+  assetClass   String?
+  expenseRatio Decimal? @db.Decimal(5, 3)
+  etfIndex      String?
+  createdAt     DateTime @default(now())
+  
+  @@unique([ticker, inceptionDate])
+  @@index([inceptionDate])
+  @@map("new_launch_etfs")
+}
+
+model GainerLoser {
+  id            Int      @id @default(autoincrement())
+  period        String
+  rankType      String
+  rank          Int
+  ticker        String
+  issuer        String?
+  etfLeverage   String?
+  aum           Decimal? @db.Decimal(15, 2)
+  etfIndex      String?
+  returnValue   Decimal  @db.Decimal(10, 4)
+  createdAt     DateTime @default(now())
+  
+  @@unique([period, rankType, rank])
+  @@index([period])
+  @@index([ticker])
+  @@map("gainer_losers")
+}
+
+model MarketStat {
+  id              Int      @id @default(autoincrement())
+  statKey         String   @unique
+  totalAUM        Decimal? @db.Decimal(20, 2)
+  totalETFCount   Int?
+  issuer          String?
+  issuerAUM       Decimal? @db.Decimal(20, 2)
+  issuerCount     Int?
+  leverageType    String?
+  leverageAUM     Decimal? @db.Decimal(20, 2)
+  leverageCount   Int?
+  expenseRatio    String?
+  expenseCount    Int?
+  createdAt       DateTime @default(now()) @updatedAt
+  
+  @@index([statKey])
+  @@index([issuer])
+  @@index([leverageType])
+  @@map("market_stats")
+}
+
+model IndexConstituent {
+  id        Int      @id @default(autoincrement())
+  indexName String
+  symbols   String[]
+  createdAt DateTime @default(now()) @updatedAt
+  
+  @@unique([indexName])
+  @@map("index_constituents")
+}

@@ -1,132 +1,116 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, ScanCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
-import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { PrismaClient } from '@prisma/client'
 
-const client = new DynamoDBClient({ region: 'us-east-1' })
+const prisma = new PrismaClient()
+
+function sortETFs(etfs: any[], sortField: string, sortOrder: 'asc' | 'desc') {
+  return etfs.sort((a, b) => {
+    const aVal = a[sortField]
+    const bVal = b[sortField]
+
+    // Handle nulls
+    if (aVal === null || aVal === undefined) return sortOrder === 'asc' ? 1 : -1
+    if (bVal === null || bVal === undefined) return sortOrder === 'asc' ? -1 : 1
+
+    const aNum = Number(aVal)
+    const bNum = Number(bVal)
+
+    if (sortOrder === 'desc') {
+      // For descending: positive numbers first (largest to smallest), then negatives
+      if (aNum >= 0 && bNum >= 0) return bNum - aNum
+      if (aNum < 0 && bNum < 0) return bNum - aNum
+      return aNum >= 0 ? -1 : 1
+    } else {
+      // For ascending: negatives first (smallest to largest), then positives
+      if (aNum >= 0 && bNum >= 0) return aNum - bNum
+      if (aNum < 0 && bNum < 0) return aNum - bNum
+      return aNum < 0 ? -1 : 1
+    }
+  })
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { leverageType, issuer, sortBy = 'assets', sortOrder = 'desc', limit = 100 } = req.query
 
   try {
-    let params: any
+    let where: any = {}
 
-    // If leverageType is specified, use GSI query for better performance
+    // Build filter conditions
     if (leverageType && leverageType !== 'all') {
-      params = {
-        TableName: 'ETFData',
-        IndexName: 'etfLeverage-index',
-        KeyConditionExpression: 'etfLeverage = :leverage',
-        ExpressionAttributeValues: {
-          ':leverage': { S: leverageType as string },
+      where.etfLeverage = leverageType as string
+    }
+
+    if (issuer && issuer !== 'all') {
+      where.issuer = issuer as string
+    }
+
+    // For numeric fields that might have negative values, get all data and sort client-side
+    const isNumericField = ['ch1w', 'ch1m', 'ch6m', 'chYTD', 'ch1y', 'ch3y', 'ch5y', 'ch10y', 'allTimeLowChange', 'allTimeHighChange'].includes(sortBy as string)
+    
+    // Determine sort field for database
+    const sortField = sortBy === 'assets' ? 'aum' : (sortBy as string)
+    const order = sortOrder === 'asc' ? 'asc' : 'desc'
+
+    // Query database with Prisma
+    const etfs = await prisma.eTFData.findMany({
+      where,
+      ...(isNumericField ? {} : {
+        orderBy: {
+          [sortField]: order,
         },
-      }
+      }),
+      take: Number(limit),
+    })
 
-      const data = await client.send(new QueryCommand(params))
-      console.log(data.Items.length)
-      let etfs = processETFData(data.Items || [])
-
-      // Filter by issuer if specified
-      if (issuer && issuer !== 'all') {
-        etfs = etfs.filter(etf => etf.issuer === issuer)
-      }
-
-      const sorted = sortETFs(etfs, sortBy as string, sortOrder as string)
-      const limited = sorted.slice(0, Number(limit))
-
-      return res.status(200).json({
-        count: limited.length,
-        total: etfs.length,
-        data: limited,
-      })
-    } else {
-      // Scan entire table (for 'all' or no filter) with pagination
-      params = {
-        TableName: 'ETFData',
-      }
-
-      let allItems: any[] = []
-      let lastEvaluatedKey: any = undefined
-
-      do {
-        if (lastEvaluatedKey) {
-          params.ExclusiveStartKey = lastEvaluatedKey
-        }
-        const data = await client.send(new ScanCommand(params))
-        allItems.push(...(data.Items || []))
-        lastEvaluatedKey = data.LastEvaluatedKey
-      } while (lastEvaluatedKey)
-
-      console.log('api return etf count', allItems.length)
-      let etfs = processETFData(allItems)
-
-      // Filter by issuer if specified
-      if (issuer && issuer !== 'all') {
-        etfs = etfs.filter(etf => etf.issuer === issuer)
-      }
-
-      const sorted = sortETFs(etfs, sortBy as string, sortOrder as string)
-      const limited = sorted.slice(0, Number(limit))
-
-      return res.status(200).json({
-        count: limited.length,
-        total: etfs.length,
-        data: limited,
-      })
+    // Client-side sort for numeric fields with mixed positive/negative values
+    let sortedEtfs = etfs
+    if (isNumericField) {
+      sortedEtfs = sortETFs(etfs, sortField, sortOrder as 'asc' | 'desc')
     }
+
+    // Transform Prisma data to API response format
+    const formatted = sortedEtfs.map(etf => ({
+      ticker: etf.ticker,
+      etfLeverage: etf.etfLeverage,
+      issuer: etf.issuer,
+      assets: etf.aum ? Number(etf.aum) : 0,
+      assetClass: etf.assetClass,
+      expenseRatio: etf.expenseRatio ? Number(etf.expenseRatio) : null,
+      peRatio: etf.peRatio ? Number(etf.peRatio) : null,
+      close: etf.price ? Number(etf.price) : null,
+      volume: etf.volume ? Number(etf.volume) : null,
+      ch1w: etf.ch1w ? Number(etf.ch1w) : null,
+      ch1m: etf.ch1m ? Number(etf.ch1m) : null,
+      ch6m: etf.ch6m ? Number(etf.ch6m) : null,
+      chYTD: etf.chYTD ? Number(etf.chYTD) : null,
+      ch1y: etf.ch1y ? Number(etf.ch1y) : null,
+      ch3y: etf.ch3y ? Number(etf.ch3y) : null,
+      ch5y: etf.ch5y ? Number(etf.ch5y) : null,
+      ch10y: etf.ch10y ? Number(etf.ch10y) : null,
+      high52: etf.high52 ? Number(etf.high52) : null,
+      low52: etf.low52 ? Number(etf.low52) : null,
+      allTimeLow: etf.allTimeLow ? Number(etf.allTimeLow) : null,
+      allTimeLowChange: etf.allTimeLowChange ? Number(etf.allTimeLowChange) : null,
+      allTimeHigh: etf.allTimeHigh ? Number(etf.allTimeHigh) : null,
+      allTimeHighDate: etf.allTimeHighDate,
+      allTimeHighChange: etf.allTimeHighChange ? Number(etf.allTimeHighChange) : null,
+      allTimeLowDate: etf.allTimeLowDate,
+      lastUpdated: etf.lastUpdated.toISOString(),
+      etfIndex: etf.etfIndex || null,
+    }))
+
+    // Get total count for pagination info
+    const total = await prisma.eTFData.count({ where })
+
+    return res.status(200).json({
+      count: formatted.length,
+      total,
+      data: formatted,
+    })
   } catch (error) {
-    console.error('Error fetching ETF data from DynamoDB:', error)
+    console.error('Error fetching ETF data from PostgreSQL:', error)
     res.status(500).json({ error: 'Failed to fetch ETF data' })
+  } finally {
+    await prisma.$disconnect()
   }
-}
-
-function processETFData(items: any[]): any[] {
-  return items.map(dbItem => {
-    const item = unmarshall(dbItem)
-    return {
-      ticker: item.ticker,
-      etfLeverage: item.etfLeverage,
-      issuer: item.issuer,
-      assets: item.aum ? Number(item.aum) : 0,
-      assetClass: item.assetClass,
-      expenseRatio: item.expenseRatio ? Number(item.expenseRatio) : null,
-      peRatio: item.peRatio ? Number(item.peRatio) : null,
-      close: item.price ? Number(item.price) : null,
-      volume: item.volume ? Number(item.volume) : null,
-      ch1w: item.ch1w ? Number(item.ch1w) : null,
-      ch1m: item.ch1m ? Number(item.ch1m) : null,
-      ch6m: item.ch6m ? Number(item.ch6m) : null,
-      chYTD: item.chYTD ? Number(item.chYTD) : null,
-      ch1y: item.ch1y ? Number(item.ch1y) : null,
-      ch3y: item.ch3y ? Number(item.ch3y) : null,
-      ch5y: item.ch5y ? Number(item.ch5y) : null,
-      ch10y: item.ch10y ? Number(item.ch10y) : null,
-      high52: item.high52 ? Number(item.high52) : null,
-      low52: item.low52 ? Number(item.low52) : null,
-      allTimeLow: item.allTimeLow ? Number(item.allTimeLow) : null,
-      allTimeLowChange: item.allTimeLowChange ? Number(item.allTimeLowChange) : null,
-      allTimeHigh: item.allTimeHigh ? Number(item.allTimeHigh) : null,
-      allTimeHighDate: item.allTimeHighDate,
-      allTimeHighChange: item.allTimeHighChange ? Number(item.allTimeHighChange) : null,
-      allTimeLowDate: item.allTimeLowDate,
-      lastUpdated: item.lastUpdated,
-      etfIndex: item.etfIndex || null,
-    }
-  })
-}
-
-function sortETFs(etfs: any[], sortBy: string, sortOrder: string): any[] {
-  return etfs.sort((a, b) => {
-    let aVal = a[sortBy]
-    let bVal = b[sortBy]
-
-    // Handle null/undefined values
-    if (aVal === null || aVal === undefined) aVal = sortOrder === 'asc' ? Infinity : -Infinity
-    if (bVal === null || bVal === undefined) bVal = sortOrder === 'asc' ? Infinity : -Infinity
-
-    if (sortOrder === 'asc') {
-      return aVal > bVal ? 1 : -1
-    } else {
-      return aVal < bVal ? 1 : -1
-    }
-  })
 }
