@@ -32,6 +32,14 @@ export default async function handler(
       },
     })
 
+    const expenseRatioStats = await prisma.marketStat.findMany({
+      where: {
+        statKey: {
+          startsWith: 'EXPENSE_RATIO#',
+        },
+      },
+    })
+
     const issuers = issuerStats
       .map(stat => ({
         issuer: stat.issuer || '',
@@ -41,11 +49,17 @@ export default async function handler(
       .filter(i => i.issuer)
       .sort((a, b) => b.aum - a.aum)
 
+    const expenseRatios: Record<string, number> = {}
+    expenseRatioStats.forEach(stat => {
+      const ratioRange = stat.expenseRatioRange || ''
+      expenseRatios[ratioRange] = stat.expenseRatioCount || 0
+    })
+
     const marketStats: MarketStats = {
       totalAUM: globalStat?.totalAUM ? Number(globalStat.totalAUM) : 0,
       totalETFCount: globalStat?.totalETFCount || 0,
       issuers,
-      expenseRatios: {},
+      expenseRatios,
       timestamp: globalStat?.createdAt?.toISOString() || new Date().toISOString(),
     }
 

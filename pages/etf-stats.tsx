@@ -206,9 +206,10 @@ export default function ETFStats() {
   const issuerShareLabels = stats.issuers.slice(0, 8).map(i => i.issuer)
   const issuerShareData = stats.issuers.slice(0, 8).map(i => i.aum)
 
-  // Expense ratio data
-  const expenseRatioLabels = Object.keys(stats.expenseRatios)
-  const expenseRatioCounts = Object.values(stats.expenseRatios)
+  // Expense ratio data - maintain consistent order
+  const expenseRatioOrder = ['0.00-0.10', '0.10-0.25', '0.25-0.50', '0.50-1.00', '1.00-2.00', '2.00+', 'N/A']
+  const expenseRatioLabels = expenseRatioOrder.filter(range => range in stats.expenseRatios)
+  const expenseRatioCounts = expenseRatioLabels.map(label => stats.expenseRatios[label])
 
   // Leverage type data (already sorted correctly by API)
   const leverageLabels = leverageStats.map(l => l.leverageType)

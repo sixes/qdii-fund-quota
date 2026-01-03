@@ -109,19 +109,19 @@ model GainerLoser {
 }
 
 model MarketStat {
-  id              Int      @id @default(autoincrement())
-  statKey         String   @unique
-  totalAUM        Decimal? @db.Decimal(20, 2)
-  totalETFCount   Int?
-  issuer          String?
-  issuerAUM       Decimal? @db.Decimal(20, 2)
-  issuerCount     Int?
-  leverageType    String?
-  leverageAUM     Decimal? @db.Decimal(20, 2)
-  leverageCount   Int?
-  expenseRatio    String?
-  expenseCount    Int?
-  createdAt       DateTime @default(now()) @updatedAt
+  id                  Int      @id @default(autoincrement())
+  statKey             String   @unique
+  totalAUM            Decimal? @db.Decimal(20, 2)
+  totalETFCount       Int?
+  issuer              String?
+  issuerAUM           Decimal? @db.Decimal(20, 2)
+  issuerCount         Int?
+  leverageType        String?
+  leverageAUM         Decimal? @db.Decimal(20, 2)
+  leverageCount       Int?
+  expenseRatioRange   String?
+  expenseRatioCount   Int?
+  createdAt           DateTime @default(now()) @updatedAt
   
   @@index([statKey])
   @@index([issuer])

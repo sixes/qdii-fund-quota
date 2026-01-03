@@ -280,7 +280,7 @@ def identify_delisted_etfs(conn, old_tickers, new_tickers):
         for ticker in delisted_tickers:
             cur.execute(
                 """
-                SELECT ticker, etfLeverage, issuer, aum, assetClass, expenseRatio, etfIndex
+                SELECT ticker, "etfLeverage", issuer, aum, "assetClass", "expenseRatio", "etfIndex"
                 FROM etf_data WHERE ticker = %s
                 """,
                 (ticker,)
@@ -290,9 +290,9 @@ def identify_delisted_etfs(conn, old_tickers, new_tickers):
                 cur.execute(
                     """
                     INSERT INTO delisted_etfs
-                    (ticker, etfLeverage, issuer, aum, assetClass, expenseRatio, etfIndex, delistedDate)
+                    (ticker, "etfLeverage", issuer, aum, "assetClass", "expenseRatio", "etfIndex", "delistedDate")
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (ticker, delistedDate) DO NOTHING
+                    ON CONFLICT (ticker, "delistedDate") DO NOTHING
                     """,
                     (result[0], result[1], result[2], result[3], result[4], result[5], result[6], current_timestamp)
                 )
@@ -454,7 +454,7 @@ def save_gainers_and_losers(conn, etf_data):
 
 
 def calculate_and_save_market_statistics(conn, etf_data):
-    """Calculate and save market statistics."""
+    """Calculate and save market statistics including expense ratio distribution."""
     logger.info("Calculating and saving market statistics...")
 
     try:
@@ -464,6 +464,15 @@ def calculate_and_save_market_statistics(conn, etf_data):
             'issuers': {},
             'leverage_types': {},
             'issuer_leverage': {},
+            'expense_ratios': {
+                '0.00-0.10': 0,
+                '0.10-0.25': 0,
+                '0.25-0.50': 0,
+                '0.50-1.00': 0,
+                '1.00-2.00': 0,
+                '2.00+': 0,
+                'N/A': 0
+            }
         }
 
         for ticker, data in etf_data.items():
@@ -494,6 +503,25 @@ def calculate_and_save_market_statistics(conn, etf_data):
             stats['issuer_leverage'][issuer][leverage_type]['count'] += 1
             if aum:
                 stats['issuer_leverage'][issuer][leverage_type]['aum'] += float(aum)
+
+            # Track by expense ratio (same logic as DynamoDB script)
+            expense_ratio = data.get('expenseRatio')
+            if expense_ratio is None:
+                stats['expense_ratios']['N/A'] += 1
+            else:
+                ratio = float(expense_ratio)
+                if ratio < 0.10:
+                    stats['expense_ratios']['0.00-0.10'] += 1
+                elif ratio < 0.25:
+                    stats['expense_ratios']['0.10-0.25'] += 1
+                elif ratio < 0.50:
+                    stats['expense_ratios']['0.25-0.50'] += 1
+                elif ratio < 1.00:
+                    stats['expense_ratios']['0.50-1.00'] += 1
+                elif ratio < 2.00:
+                    stats['expense_ratios']['1.00-2.00'] += 1
+                else:
+                    stats['expense_ratios']['2.00+'] += 1
 
         cur = conn.cursor()
 
@@ -529,8 +557,19 @@ def calculate_and_save_market_statistics(conn, etf_data):
                 (f"LEVERAGE#{leverage_type}", leverage_type, leverage_stats['aum'], leverage_stats['count'])
             )
 
+        # Save expense ratio stats
+        for ratio_range, count in stats['expense_ratios'].items():
+            cur.execute(
+                """
+                INSERT INTO market_stats ("statKey", "expenseRatioRange", "expenseRatioCount")
+                VALUES (%s, %s, %s)
+                """,
+                (f"EXPENSE_RATIO#{ratio_range}", ratio_range, count)
+            )
+
         conn.commit()
         logger.info(f"✓ Market statistics saved for {len(stats['issuers'])} issuers")
+        logger.info(f"✓ Expense ratio distribution saved: {stats['expense_ratios']}")
         cur.close()
 
     except Exception as e:
