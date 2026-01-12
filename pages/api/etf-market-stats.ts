@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { PrismaClient } from '@prisma/client'
+import { cacheAsync } from '../../lib/cache'
 
 const prisma = new PrismaClient()
 
@@ -20,48 +21,54 @@ export default async function handler(
   res: NextApiResponse<MarketStats | { error: string }>
 ) {
   try {
-    const globalStat = await prisma.marketStat.findUnique({
-      where: { statKey: 'MARKET_STATS_TOTAL' },
-    })
+    const marketStats = await cacheAsync(
+      'market-stats',
+      async () => {
+        const globalStat = await prisma.marketStat.findUnique({
+          where: { statKey: 'MARKET_STATS_TOTAL' },
+        })
 
-    const issuerStats = await prisma.marketStat.findMany({
-      where: {
-        statKey: {
-          startsWith: 'ISSUER#',
-        },
+        const issuerStats = await prisma.marketStat.findMany({
+          where: {
+            statKey: {
+              startsWith: 'ISSUER#',
+            },
+          },
+        })
+
+        const expenseRatioStats = await prisma.marketStat.findMany({
+          where: {
+            statKey: {
+              startsWith: 'EXPENSE_RATIO#',
+            },
+          },
+        })
+
+        const issuers = issuerStats
+          .map(stat => ({
+            issuer: stat.issuer || '',
+            aum: stat.issuerAUM ? Number(stat.issuerAUM) : 0,
+            count: stat.issuerCount || 0,
+          }))
+          .filter(i => i.issuer)
+          .sort((a, b) => b.aum - a.aum)
+
+        const expenseRatios: Record<string, number> = {}
+        expenseRatioStats.forEach(stat => {
+          const ratioRange = stat.expenseRatioRange || ''
+          expenseRatios[ratioRange] = stat.expenseRatioCount || 0
+        })
+
+        return {
+          totalAUM: globalStat?.totalAUM ? Number(globalStat.totalAUM) : 0,
+          totalETFCount: globalStat?.totalETFCount || 0,
+          issuers,
+          expenseRatios,
+          timestamp: globalStat?.createdAt?.toISOString() || new Date().toISOString(),
+        } as MarketStats
       },
-    })
-
-    const expenseRatioStats = await prisma.marketStat.findMany({
-      where: {
-        statKey: {
-          startsWith: 'EXPENSE_RATIO#',
-        },
-      },
-    })
-
-    const issuers = issuerStats
-      .map(stat => ({
-        issuer: stat.issuer || '',
-        aum: stat.issuerAUM ? Number(stat.issuerAUM) : 0,
-        count: stat.issuerCount || 0,
-      }))
-      .filter(i => i.issuer)
-      .sort((a, b) => b.aum - a.aum)
-
-    const expenseRatios: Record<string, number> = {}
-    expenseRatioStats.forEach(stat => {
-      const ratioRange = stat.expenseRatioRange || ''
-      expenseRatios[ratioRange] = stat.expenseRatioCount || 0
-    })
-
-    const marketStats: MarketStats = {
-      totalAUM: globalStat?.totalAUM ? Number(globalStat.totalAUM) : 0,
-      totalETFCount: globalStat?.totalETFCount || 0,
-      issuers,
-      expenseRatios,
-      timestamp: globalStat?.createdAt?.toISOString() || new Date().toISOString(),
-    }
+      5 * 60 * 1000 // 5 minute cache
+    )
 
     res.status(200).json(marketStats)
   } catch (error) {

@@ -8,15 +8,16 @@ datasource db {
 }
 
 model FundQuota {
-  id           Int    @id @default(autoincrement())
-  fund_company String
-  fund_name    String
-  share_class  String
-  fund_code    String @db.VarChar(20)
-  quota        Int
-  currency     String @db.Char(3)
-  otc          String @db.VarChar(10)
-  pdf_id       Int
+  id              Int      @id @default(autoincrement())
+  fund_company    String
+  fund_name       String
+  share_class     String
+  fund_code       String   @db.VarChar(20)
+  quota           Float
+  currency        String   @db.Char(3)
+  otc             String   @db.VarChar(10)
+  pdf_id          Int
+  effective_date  DateTime @db.Date
 
   @@map("fund_quota")
 }
@@ -54,6 +55,12 @@ model ETFData {
 
   @@index([etfLeverage])
   @@index([issuer])
+  @@index([etfLeverage, aum(sort: Desc)])
+  @@index([issuer, aum(sort: Desc)])
+  @@index([etfLeverage, issuer, aum(sort: Desc)])
+  @@index([chYTD(sort: Desc)])
+  @@index([ch1m(sort: Desc)])
+  @@index([ch1y(sort: Desc)])
   @@map("etf_data")
 }
 
