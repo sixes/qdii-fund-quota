@@ -1,8 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { DynamoDBClient, QueryCommand } from '@aws-sdk/client-dynamodb'
-import { unmarshall } from '@aws-sdk/util-dynamodb'
-
-const client = new DynamoDBClient({ region: 'us-east-1' })
+import { stockPrisma } from '../../lib/stockdb'
 
 function getTodayDateStr() {
   const now = new Date()
@@ -13,43 +10,51 @@ function getTodayDateStr() {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const date = (req.query.date as string) || getTodayDateStr()
-  const stocks = []
-
+  const dateStr = (req.query.date as string) || getTodayDateStr()
+  
   try {
-    const params = {
-      TableName: 'stock_px_changed',
-      IndexName: 'date-index', // GSI on 'date'
-      KeyConditionExpression: '#date = :date',
-      ExpressionAttributeNames: {
-        '#date': 'date',
-      },
-      ExpressionAttributeValues: {
-        ':date': { S: date },
-      },
+    // Check if database URL is configured
+    if (!process.env.STOCK_DATABASE_URL) {
+      console.error('STOCK_DATABASE_URL environment variable is not set')
+      return res.status(500).json({ error: 'Database not configured' })
     }
+
+    const targetDate = new Date(dateStr)
     
-    const data = await client.send(new QueryCommand(params))
+    const stockData = await stockPrisma.stockPxChanged.findMany({
+      where: {
+        date: targetDate,
+      },
+      orderBy: {
+        changePercentage: 'desc',
+      },
+    })
     
-    if (data.Items && data.Items.length > 0) {
-      for (const dbItem of data.Items) {
-        const item = unmarshall(dbItem)
-        stocks.push({
-          ticker: item.ticker,
-          name: item.name,
-          date: item.date,
-          market: item.market,
-          lastClosingPrice: item.closing_price ? Number(item.closing_price).toFixed(2) : undefined,
-          lastChangePercent: item.change_percentage ? Number(item.change_percentage).toFixed(2) : undefined,
-          changeFromAthPercent: item.chg_pct_so_far ? Number(item.chg_pct_so_far).toFixed(2) : undefined,
-          allTimeHigh: item.highest_px ? Number(item.highest_px).toFixed(2) : undefined,
-        })
-      }
-    }
+    console.log(`Found ${stockData.length} stocks for date ${dateStr}`)
+    
+    const stocks = stockData.map((item) => ({
+      ticker: item.ticker,
+      name: item.name || undefined,
+      date: item.date.toISOString().split('T')[0],
+      market: item.market,
+      lastClosingPrice: item.closingPrice ? Number(item.closingPrice).toFixed(2) : undefined,
+      lastChangePercent: item.changePercentage ? Number(item.changePercentage).toFixed(2) : undefined,
+      changeFromAthPercent: item.chgPctSoFar ? Number(item.chgPctSoFar).toFixed(2) : undefined,
+      allTimeHigh: item.highestPx ? Number(item.highestPx).toFixed(2) : undefined,
+    }))
     
     res.status(200).json(stocks)
   } catch (error) {
-    console.error('Error fetching stock data from DynamoDB:', error)
-    res.status(500).json({ error: 'Failed to fetch stock data' })
+    console.error('Error fetching stock data from PostgreSQL:', error)
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      date: dateStr,
+      dbUrl: process.env.STOCK_DATABASE_URL ? 'Set' : 'Not set'
+    })
+    res.status(500).json({ 
+      error: 'Failed to fetch stock data',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }

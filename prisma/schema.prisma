@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -144,4 +145,23 @@ model IndexConstituent {
   
   @@unique([indexName])
   @@map("index_constituents")
+}
+
+model StockPxChanged {
+  ticker           String   @db.VarChar(20)
+  name             String?  @db.VarChar(255)
+  date             DateTime @db.Date
+  market           String   @db.VarChar(10)
+  closingPrice     Decimal? @db.Decimal(15, 4) @map("closing_price")
+  changePercentage Decimal? @db.Decimal(10, 4) @map("change_percentage")
+  chgPctSoFar      Decimal? @db.Decimal(10, 4) @map("chg_pct_so_far")
+  highestPx        Decimal? @db.Decimal(15, 4) @map("highest_px")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@id([ticker, date])
+  @@index([date(sort: Desc)])
+  @@index([market])
+  @@index([ticker])
+  @@map("stock_px_changed")
 }
