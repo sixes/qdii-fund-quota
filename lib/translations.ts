@@ -10,7 +10,8 @@ export const translations = {
       historicalReturns: "Historical Returns",
       contact: "Contact Us",
       qdii: "QDII Funds",
-      mega7: "Mega 7+ Stocks"
+      mega7: "Mega 7+ Stocks",
+      macro: "Macro"
     },
     // Index Pages
     index: {
@@ -116,6 +117,59 @@ export const translations = {
       resources: "Resources",
       copyright: "All rights reserved.",
       sitemap: "Sitemap"
+    },
+    // Macro Indicators Page
+    macro: {
+      title: "US Macro Indicators",
+      description: "US Treasury yields, inflation (CPI/PCE), and Federal Reserve policy rate from FRED.",
+      heading: "US Macro Indicators",
+      subheading: "Treasury yields, inflation, and Fed policy at a glance — sourced from FRED (Federal Reserve Bank of St. Louis).",
+      loading: "Loading macro indicators...",
+      error: "Failed to load macro indicators.",
+      missingKey: "FRED_API_KEY is not configured on the server.",
+      lastUpdated: "Last updated",
+      dataSource: "Data source",
+      fred: "FRED",
+      partialWarning: "Some series could not be loaded:",
+      range: {
+        oneYear: "1Y",
+        fiveYear: "5Y",
+        tenYear: "10Y",
+        max: "MAX"
+      },
+      summary: {
+        latest: "Latest"
+      },
+      charts: {
+        yields: "2Y / 10Y / 30Y Treasury Yields",
+        yieldsSubtitle: "Right axis: 10Y − 2Y spread (negative = inversion)",
+        inflationCpi: "CPI vs Core CPI (Year-over-Year)",
+        inflationPce: "PCE vs Core PCE (Year-over-Year)",
+        fedFunds: "Federal Funds Rate",
+        centralBanks: "Major Central Bank Policy Rates",
+        usdIndex: "US Dollar Index (DXY)"
+      },
+      legend: {
+        dgs2: "2Y Yield",
+        dgs10: "10Y Yield",
+        dgs30: "30Y Yield",
+        spread: "10Y − 2Y Spread",
+        cpi: "CPI",
+        coreCpi: "Core CPI",
+        pce: "PCE",
+        corePce: "Core PCE",
+        dff: "Effective FFR",
+        fedFundsUpper: "Target Upper",
+        bojRate: "BOJ (Japan call rate)",
+        boeRate: "BOE (UK call rate)",
+        usdIndex: "DXY"
+      },
+      axis: {
+        percent: "Percent (%)",
+        spread: "Spread (pp)",
+        index: "Index",
+        date: "Date"
+      }
     }
   },
   zh: {
@@ -129,7 +183,8 @@ export const translations = {
       historicalReturns: "历史回报",
       contact: "联系我们",
       qdii: "基金额度",
-      mega7: "Mega 7+ 股票"
+      mega7: "Mega 7+ 股票",
+      macro: "宏观"
     },
     // Index Pages
     index: {
@@ -235,6 +290,59 @@ export const translations = {
       resources: "资源",
       copyright: "版权所有。",
       sitemap: "网站地图"
+    },
+    // Macro Indicators Page
+    macro: {
+      title: "美国宏观经济指标",
+      description: "来自FRED的美国国债收益率、通胀（CPI/PCE）和美联储政策利率。",
+      heading: "美国宏观经济指标",
+      subheading: "一览美国国债收益率、通胀和美联储政策——数据来源：FRED（圣路易斯联邦储备银行）。",
+      loading: "正在加载宏观指标...",
+      error: "加载宏观指标失败。",
+      missingKey: "服务器未配置 FRED_API_KEY。",
+      lastUpdated: "最近更新",
+      dataSource: "数据来源",
+      fred: "FRED",
+      partialWarning: "部分数据系列加载失败：",
+      range: {
+        oneYear: "1年",
+        fiveYear: "5年",
+        tenYear: "10年",
+        max: "全部"
+      },
+      summary: {
+        latest: "最新值"
+      },
+      charts: {
+        yields: "2年 / 10年 / 30年 美国国债收益率",
+        yieldsSubtitle: "右轴：10年期 − 2年期 利差（负值表示利率倒挂）",
+        inflationCpi: "CPI 与 核心CPI（同比）",
+        inflationPce: "PCE 与 核心PCE（同比）",
+        fedFunds: "联邦基金利率",
+        centralBanks: "主要央行政策利率",
+        usdIndex: "美元指数 (DXY)"
+      },
+      legend: {
+        dgs2: "2年期收益率",
+        dgs10: "10年期收益率",
+        dgs30: "30年期收益率",
+        spread: "10年 − 2年 利差",
+        cpi: "CPI",
+        coreCpi: "核心CPI",
+        pce: "PCE",
+        corePce: "核心PCE",
+        dff: "有效联邦基金利率",
+        fedFundsUpper: "目标利率上限",
+        bojRate: "日本央行（无担保隔夜利率）",
+        boeRate: "英国央行（隔夜利率）",
+        usdIndex: "美元指数 DXY"
+      },
+      axis: {
+        percent: "百分比 (%)",
+        spread: "利差 (个百分点)",
+        index: "指数",
+        date: "日期"
+      }
     }
   }
 };

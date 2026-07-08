@@ -103,6 +103,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
               {language === 'en' ? 'ETF Stats' : 'ETF统计'}
             </Link>
 
+            {/* Macro Indicators Button */}
+            <Link
+              href={language === 'zh' ? '/macro?lang=zh' : '/macro'}
+              className="hidden sm:block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+            >
+              {t.nav.macro}
+            </Link>
+
             <div className="hidden md:flex items-baseline space-x-4 relative">
               {/* Nasdaq 100 Dropdown */}
               <div className="relative">
@@ -298,6 +306,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {language === 'en' ? 'ETF Stats' : 'ETF统计'}
+              </Link>
+              {/* Macro Indicators */}
+              <Link
+                href={language === 'zh' ? '/macro?lang=zh' : '/macro'}
+                className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.macro}
               </Link>
               {/* Nasdaq 100 */}
               <div className="space-y-1">

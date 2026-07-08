@@ -116,6 +116,7 @@ pip install -r requirements_etf.txt
 - `DATABASE_URL` - PostgreSQL connection string for Prisma
 - `AWS_REGION` - AWS region for DynamoDB (defaults to `us-east-1`)
 - AWS credentials are configured via default credential chain (environment variables, AWS CLI, or IAM role)
+- `FRED_API_KEY` - Free API key from the Federal Reserve Bank of St. Louis used by `/api/macro-indicators` to power the `/macro` page. Request one at https://fred.stlouisfed.org/docs/api/api_key.html. Server-side only; never exposed to the client.
 
 **Next.js Config** (`next.config.js`):
 - PWA support via `next-pwa` (disabled in development)
