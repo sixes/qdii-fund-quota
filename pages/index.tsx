@@ -41,6 +41,7 @@ interface ETF {
   allTimeLowChange: number | null;
   allTimeLowDate: string | null;
   etfIndex: string | null;
+  lastUpdated?: string | null;
 }
 
 interface LeverageSummary {
@@ -76,6 +77,7 @@ export default function Home() {
   const [newLaunchETFs, setNewLaunchETFs] = useState<any[]>([]);
   const [gainersLosers, setGainersLosers] = useState<any>(null);
   const [selectedGainersLosersPeriode, setSelectedGainersLosersPeriod] = useState<'ch1w' | 'ch1m' | 'ch6m' | 'ch1y' | 'ch3y' | 'ch5y' | 'ch10y' | 'chYTD'>('chYTD');
+  const [dataUpdated, setDataUpdated] = useState<string | null>(null);
 
   // Prominent issuers for quick filter
   const prominentIssuers = ['Direxion', 'ProShares', 'GraniteShares', 'BlackRock', 'Vanguard', 'State Street', 'Invesco', 'Charles Schwab', 'JPMorgan Chase'];
@@ -191,6 +193,11 @@ export default function Home() {
 
         console.time('  ⏱️ Set State');
         setAllEtfData(data.data || []);
+        const latest = (data.data || []).reduce((acc: string | null, etf: ETF) => {
+          if (!etf.lastUpdated) return acc;
+          return acc === null || etf.lastUpdated > acc ? etf.lastUpdated : acc;
+        }, null as string | null);
+        if (latest) setDataUpdated(latest);
         setPage(1); // Reset to first page when filters change
         console.timeEnd('  ⏱️ Set State');
 
@@ -502,6 +509,16 @@ export default function Home() {
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-2">{t.title}</h1>
             <p className="text-gray-600">{t.description}</p>
+            {dataUpdated && (
+              <p className="text-sm text-gray-500 mt-1">
+                {language === 'en' ? 'Data updated: ' : '数据更新时间：'}
+                {new Date(dataUpdated).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </p>
+            )}
           </div>
           {/* Gainers and Losers Section */}
         {gainersLosers && (
@@ -548,7 +565,16 @@ export default function Home() {
                     <tbody>
                       {gainersLosers.gainers[selectedGainersLosersPeriode]?.slice(0, 10).map((etf: any, idx: number) => (
                         <tr key={idx} className="border-b hover:bg-green-50">
-                          <td className="py-2 px-2 font-medium text-green-600">{etf.ticker}</td>
+                          <td className="py-2 px-2 font-medium text-green-600">
+                            <a
+                              href={`https://stockanalysis.com/etf/${etf.ticker.toLowerCase()}/`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                            >
+                              {etf.ticker}
+                            </a>
+                          </td>
                           <td className="py-2 px-2 text-right font-semibold text-green-600">+{etf.return.toFixed(2)}%</td>
                           <td className="py-2 px-2 text-right font-semibold text-green-600">{formatAssets(etf.aum)}</td>
                           <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
@@ -578,7 +604,16 @@ export default function Home() {
                     <tbody>
                       {gainersLosers.losers[selectedGainersLosersPeriode]?.slice(0, 10).map((etf: any, idx: number) => (
                         <tr key={idx} className="border-b hover:bg-red-50">
-                          <td className="py-2 px-2 font-medium text-red-600">{etf.ticker}</td>
+                          <td className="py-2 px-2 font-medium text-red-600">
+                            <a
+                              href={`https://stockanalysis.com/etf/${etf.ticker.toLowerCase()}/`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                            >
+                              {etf.ticker}
+                            </a>
+                          </td>
                           <td className="py-2 px-2 text-right font-semibold text-red-600">{etf.return.toFixed(2)}%</td>
                           <td className="py-2 px-2 text-right text-gray-700">{formatAssets(etf.aum)}</td>
                           <td className="py-2 px-2 text-sm text-gray-700">{etf.etfLeverage}</td>
@@ -1039,7 +1074,14 @@ export default function Home() {
                           boxShadow: '2px 0 4px rgba(0,0,0,0.1)',
                           '&:hover': { backgroundColor: '#f9fafb' }
                         }}>
-                          <span className="font-semibold text-blue-600">{etf.ticker}</span>
+                          <a
+                            href={`https://stockanalysis.com/etf/${etf.ticker.toLowerCase()}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-blue-600 hover:underline"
+                          >
+                            {etf.ticker}
+                          </a>
                         </TableCell>
                         <TableCell>
                           <span className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -1149,7 +1191,16 @@ export default function Home() {
                   <tbody>
                     {delistedETFs.slice(0, 10).map((etf, idx) => (
                       <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-2 font-medium text-red-600">{etf.ticker}</td>
+                        <td className="py-2 px-2 font-medium text-red-600">
+                          <a
+                            href={`https://stockanalysis.com/etf/${etf.ticker.toLowerCase()}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                          >
+                            {etf.ticker}
+                          </a>
+                        </td>
                         <td className="py-2 px-2">{etf.issuer}</td>
                         <td className="py-2 px-2 text-right">${(etf.aum / 1e9).toFixed(2)}</td>
                         <td className="py-2 px-2">{etf.expenseRatio?.toFixed(3)}%</td>
@@ -1181,7 +1232,16 @@ export default function Home() {
                   <tbody>
                     {newLaunchETFs.slice(0, 20).map((etf, idx) => (
                       <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-2 font-medium text-green-600">{etf.ticker}</td>
+                        <td className="py-2 px-2 font-medium text-green-600">
+                          <a
+                            href={`https://stockanalysis.com/etf/${etf.ticker.toLowerCase()}/`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                          >
+                            {etf.ticker}
+                          </a>
+                        </td>
                         <td className="py-2 px-2 text-sm">{new Date(etf.inceptionDate).toLocaleDateString()}</td>
                         <td className="py-2 px-2 text-right">${(etf.aum / 1e9).toFixed(2)}</td>
                         <td className="py-2 px-2">{etf.issuer}</td>
