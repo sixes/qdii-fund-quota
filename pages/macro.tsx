@@ -56,6 +56,11 @@ type SeriesKey =
   | 'bojRate'
   | 'boeRate'
   | 'usdIndex'
+  | 'freightIndex'
+  | 'airlineFaresYoy'
+  | 'airPassengers'
+  | 'skew'
+  | 'cor3m'
 
 interface MacroPayload {
   series: Partial<Record<SeriesKey, SeriesPayload>>
@@ -201,6 +206,11 @@ export default function MacroPage() {
       bojRate: filterByRange(s?.bojRate?.observations, cutoff),
       boeRate: filterByRange(s?.boeRate?.observations, cutoff),
       usdIndex: filterByRange(s?.usdIndex?.observations, cutoff),
+      freightIndex: filterByRange(s?.freightIndex?.observations, cutoff),
+      airlineFaresYoy: filterByRange(s?.airlineFaresYoy?.observations, cutoff),
+      airPassengers: filterByRange(s?.airPassengers?.observations, cutoff),
+      skew: filterByRange(s?.skew?.observations, cutoff),
+      cor3m: filterByRange(s?.cor3m?.observations, cutoff),
     }
   }, [payload, cutoff])
 
@@ -473,6 +483,84 @@ export default function MacroPage() {
     ],
   }
 
+  const freightData = {
+    labels: ranged.freightIndex.map(o => o.date),
+    datasets: [
+      {
+        label: t.macro.legend.freightIndex,
+        data: ranged.freightIndex.map(o => o.value),
+        borderColor: '#b45309',
+        backgroundColor: 'rgba(180,83,9,0.15)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        spanGaps: true,
+        fill: true,
+      },
+    ],
+  }
+
+  const airfaresData = {
+    labels: ranged.airlineFaresYoy.map(o => o.date),
+    datasets: [
+      {
+        label: t.macro.legend.airlineFares,
+        data: ranged.airlineFaresYoy.map(o => o.value),
+        borderColor: '#7c3aed',
+        backgroundColor: '#7c3aed',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        spanGaps: true,
+      },
+    ],
+  }
+
+  const airPassengersData = {
+    labels: ranged.airPassengers.map(o => o.date),
+    datasets: [
+      {
+        label: t.macro.legend.airPassengers,
+        data: ranged.airPassengers.map(o => o.value),
+        borderColor: '#0284c7',
+        backgroundColor: '#0284c7',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        spanGaps: true,
+      },
+    ],
+  }
+
+  const skewData = {
+    labels: ranged.skew.map(o => o.date),
+    datasets: [
+      {
+        label: t.macro.legend.skew,
+        data: ranged.skew.map(o => o.value),
+        borderColor: '#be123c',
+        backgroundColor: 'rgba(190,18,60,0.12)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        spanGaps: true,
+        fill: true,
+      },
+    ],
+  }
+
+  const cor3mData = {
+    labels: ranged.cor3m.map(o => o.date),
+    datasets: [
+      {
+        label: t.macro.legend.cor3m,
+        data: ranged.cor3m.map(o => o.value),
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79,70,229,0.12)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        spanGaps: true,
+        fill: true,
+      },
+    ],
+  }
+
   return (
     <>
       <Head>
@@ -591,6 +679,42 @@ export default function MacroPage() {
                       options={baseLineOptions(t.macro.axis.index, { unit: 'raw' }) as any}
                     />
                   </div>
+                  <p className="text-xs text-gray-500 mt-3">{t.macro.dxyNote}</p>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-5">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.macro.charts.freight}</h2>
+                  <div className="relative h-80">
+                    <Line data={freightData} options={baseLineOptions(t.macro.axis.index, { unit: 'raw' }) as any} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-5">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.macro.charts.airfares}</h2>
+                  <div className="relative h-80">
+                    <Line data={airfaresData} options={baseLineOptions(t.macro.axis.percent) as any} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-5">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.macro.charts.airPassengers}</h2>
+                  <div className="relative h-80">
+                    <Line data={airPassengersData} options={baseLineOptions(t.macro.axis.percent) as any} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-5">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.macro.charts.skew}</h2>
+                  <div className="relative h-80">
+                    <Line data={skewData} options={baseLineOptions(t.macro.axis.index, { unit: 'raw' }) as any} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-5">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">{t.macro.charts.cor3m}</h2>
+                  <div className="relative h-80">
+                    <Line data={cor3mData} options={baseLineOptions(t.macro.axis.index, { unit: 'raw' }) as any} />
+                  </div>
                 </div>
               </div>
 
@@ -603,6 +727,15 @@ export default function MacroPage() {
                   className="text-indigo-600 hover:underline"
                 >
                   {t.macro.fred}
+                </a>
+                {', '}
+                <a
+                  href="https://www.cboe.com/us/indices/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 hover:underline"
+                >
+                  {t.macro.cboe}
                 </a>
               </p>
             </>

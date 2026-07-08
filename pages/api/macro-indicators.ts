@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { cacheAsync } from '../../lib/cache'
 import { fetchFredSeries, SERIES, FredError, type Observation } from '../../lib/fred'
+import { fetchCboeSeries, CBOE_SYMBOLS, CboeError } from '../../lib/cboe'
 
 interface SeriesPayload {
   id: string
@@ -22,7 +23,12 @@ interface MacroPayload {
     | 'fedFundsUpper'
     | 'bojRate'
     | 'boeRate'
-    | 'usdIndex',
+    | 'usdIndex'
+    | 'freightIndex'
+    | 'airlineFaresYoy'
+    | 'airPassengers'
+    | 'skew'
+    | 'cor3m',
     SeriesPayload
   >>
   lastUpdated: string
@@ -53,7 +59,7 @@ function yoy(observations: Observation[]): Observation[] {
 }
 
 const SERIES_META: Record<
-  Exclude<keyof MacroPayload['series'], 'usdIndex'>,
+  Exclude<keyof MacroPayload['series'], 'usdIndex' | 'skew' | 'cor3m'>,
   { id: string; title: string; unit: string; yoy: boolean; ydsStart?: (start: string) => string }
 > = {
   dgs2: { id: SERIES.DGS2, title: '2-Year Treasury Yield', unit: '%', yoy: false },
@@ -67,6 +73,9 @@ const SERIES_META: Record<
   fedFundsUpper: { id: SERIES.DFEDTARU, title: 'Fed Funds Target Upper', unit: '%', yoy: false },
   bojRate: { id: SERIES.BOJ_CALL, title: 'Japan Immediate Call Rate (BOJ proxy)', unit: '%', yoy: false },
   boeRate: { id: SERIES.BOE_CALL, title: 'UK Immediate Call Rate (BOE proxy)', unit: '%', yoy: false },
+  freightIndex: { id: SERIES.CASS_FREIGHT, title: 'Cass Freight Index: Shipments', unit: 'index', yoy: false },
+  airlineFaresYoy: { id: SERIES.AIRLINE_FARES, title: 'CPI: Airline Fares YoY', unit: '%', yoy: true },
+  airPassengers: { id: SERIES.AIR_RPM, title: 'Air Revenue Passenger Miles YoY', unit: '%', yoy: true },
 }
 
 // ICE US Dollar Index (DXY) formula:
@@ -130,7 +139,7 @@ function trimToStart(obs: Observation[], start: string): Observation[] {
 async function buildPayload(start: string): Promise<MacroPayload> {
   const keys = Object.keys(SERIES_META) as Array<keyof typeof SERIES_META>
 
-  const [settled, dxySettled] = await Promise.all([
+  const [settled, dxySettled, cboeSettled] = await Promise.all([
     Promise.allSettled(
       keys.map(k => {
         const meta = SERIES_META[k]
@@ -141,6 +150,10 @@ async function buildPayload(start: string): Promise<MacroPayload> {
     Promise.allSettled(
       DXY_INPUTS.map(input => fetchFredSeries(input.id, { start }))
     ),
+    Promise.allSettled([
+      fetchCboeSeries(CBOE_SYMBOLS.SKEW, { start }),
+      fetchCboeSeries(CBOE_SYMBOLS.COR3M, { start }),
+    ]),
   ])
 
   const series: MacroPayload['series'] = {}
@@ -184,6 +197,27 @@ async function buildPayload(start: string): Promise<MacroPayload> {
     })
   }
 
+  const cboeMeta: Array<{ key: 'skew' | 'cor3m'; id: string; title: string }> = [
+    { key: 'skew', id: CBOE_SYMBOLS.SKEW, title: 'CBOE SKEW Index' },
+    { key: 'cor3m', id: CBOE_SYMBOLS.COR3M, title: 'CBOE 3-Month Implied Correlation Index' },
+  ]
+  cboeSettled.forEach((result, i) => {
+    const meta = cboeMeta[i]
+    if (result.status === 'fulfilled') {
+      series[meta.key] = {
+        id: meta.id,
+        title: meta.title,
+        unit: 'index',
+        observations: result.value,
+      }
+    } else {
+      const reason = result.reason
+      const message =
+        reason instanceof CboeError ? reason.message : reason?.message ?? String(reason)
+      warnings.push({ id: meta.id, message })
+    }
+  })
+
   const payload: MacroPayload = {
     series,
     lastUpdated: new Date().toISOString(),
@@ -203,7 +237,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const payload = await cacheAsync(
-      `macro:indicators:v3:${start}`,
+      `macro:indicators:v4:${start}`,
       () => buildPayload(start),
       6 * 60 * 60 * 1000
     )

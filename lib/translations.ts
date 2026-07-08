@@ -130,6 +130,8 @@ export const translations = {
       lastUpdated: "Last updated",
       dataSource: "Data source",
       fred: "FRED",
+      cboe: "CBOE",
+      dxyNote: "Note: FRED does not publish the ICE US Dollar Index (DXY) directly. This DXY line is reconstructed from FRED's daily bilateral exchange rates using the official ICE formula: DXY = 50.14348112 × EURUSD^-0.576 × USDJPY^0.136 × GBPUSD^-0.119 × USDCAD^0.091 × USDSEK^0.042 × USDCHF^0.036.",
       partialWarning: "Some series could not be loaded:",
       range: {
         oneYear: "1Y",
@@ -147,7 +149,12 @@ export const translations = {
         inflationPce: "PCE vs Core PCE (Year-over-Year)",
         fedFunds: "Federal Funds Rate",
         centralBanks: "Major Central Bank Policy Rates",
-        usdIndex: "US Dollar Index (DXY)"
+        usdIndex: "US Dollar Index (DXY)",
+        freight: "Cass Freight Index: Shipments",
+        airfares: "Airline Fares (CPI, Year-over-Year)",
+        airPassengers: "Air Revenue Passenger Miles (Year-over-Year)",
+        skew: "CBOE SKEW Index (Tail Risk)",
+        cor3m: "CBOE 3-Month Implied Correlation"
       },
       legend: {
         dgs2: "2Y Yield",
@@ -162,7 +169,12 @@ export const translations = {
         fedFundsUpper: "Target Upper",
         bojRate: "BOJ (Japan call rate)",
         boeRate: "BOE (UK call rate)",
-        usdIndex: "DXY"
+        usdIndex: "DXY",
+        freightIndex: "Freight Shipments",
+        airlineFares: "Airline Fares YoY",
+        airPassengers: "Air RPM YoY",
+        skew: "SKEW",
+        cor3m: "COR3M"
       },
       axis: {
         percent: "Percent (%)",
@@ -303,6 +315,8 @@ export const translations = {
       lastUpdated: "最近更新",
       dataSource: "数据来源",
       fred: "FRED",
+      cboe: "CBOE",
+      dxyNote: "说明：FRED 未直接发布 ICE 美元指数（DXY）。此处的 DXY 曲线是根据 FRED 的每日双边汇率，按 ICE 官方公式重建：DXY = 50.14348112 × 欧元兑美元^-0.576 × 美元兑日元^0.136 × 英镑兑美元^-0.119 × 美元兑加元^0.091 × 美元兑瑞典克朗^0.042 × 美元兑瑞郎^0.036。",
       partialWarning: "部分数据系列加载失败：",
       range: {
         oneYear: "1年",
@@ -320,7 +334,12 @@ export const translations = {
         inflationPce: "PCE 与 核心PCE（同比）",
         fedFunds: "联邦基金利率",
         centralBanks: "主要央行政策利率",
-        usdIndex: "美元指数 (DXY)"
+        usdIndex: "美元指数 (DXY)",
+        freight: "Cass 货运指数：发货量",
+        airfares: "机票价格（CPI，同比）",
+        airPassengers: "航空客运周转量（同比）",
+        skew: "CBOE SKEW 指数（尾部风险）",
+        cor3m: "CBOE 3个月隐含相关性指数"
       },
       legend: {
         dgs2: "2年期收益率",
@@ -335,7 +354,12 @@ export const translations = {
         fedFundsUpper: "目标利率上限",
         bojRate: "日本央行（无担保隔夜利率）",
         boeRate: "英国央行（隔夜利率）",
-        usdIndex: "美元指数 DXY"
+        usdIndex: "美元指数 DXY",
+        freightIndex: "货运发货量",
+        airlineFares: "机票价格 同比",
+        airPassengers: "航空客运 同比",
+        skew: "SKEW",
+        cor3m: "COR3M"
       },
       axis: {
         percent: "百分比 (%)",

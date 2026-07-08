@@ -45,6 +45,10 @@ export const SERIES = {
   DEXCAUS: 'DEXCAUS',
   DEXSDUS: 'DEXSDUS',
   DEXSZUS: 'DEXSZUS',
+  // Real-economy indicators
+  CASS_FREIGHT: 'FRGSHPUSM649NCIS',
+  AIRLINE_FARES: 'CUSR0000SETG01',
+  AIR_RPM: 'AIRRPMTSI',
 } as const
 
 export type SeriesId = (typeof SERIES)[keyof typeof SERIES]
