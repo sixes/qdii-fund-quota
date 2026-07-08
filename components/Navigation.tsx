@@ -111,6 +111,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
               {t.nav.macro}
             </Link>
 
+            {/* Fear & Greed Button */}
+            <Link
+              href={language === 'zh' ? '/fear-greed?lang=zh' : '/fear-greed'}
+              className="hidden sm:block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+            >
+              {t.nav.fearGreed}
+            </Link>
+
             <div className="hidden md:flex items-baseline space-x-4 relative">
               {/* Nasdaq 100 Dropdown */}
               <div className="relative">
@@ -314,6 +322,14 @@ export default function Navigation({ language, onLanguageChange, activeTab, onTa
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {t.nav.macro}
+              </Link>
+              {/* Fear & Greed */}
+              <Link
+                href={language === 'zh' ? '/fear-greed?lang=zh' : '/fear-greed'}
+                className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t.nav.fearGreed}
               </Link>
               {/* Nasdaq 100 */}
               <div className="space-y-1">

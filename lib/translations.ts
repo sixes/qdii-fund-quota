@@ -11,7 +11,8 @@ export const translations = {
       contact: "Contact Us",
       qdii: "QDII Funds",
       mega7: "Mega 7+ Stocks",
-      macro: "Macro"
+      macro: "Macro",
+      fearGreed: "Fear & Greed"
     },
     // Index Pages
     index: {
@@ -182,6 +183,47 @@ export const translations = {
         index: "Index",
         date: "Date"
       }
+    },
+    // CNN Fear & Greed Page
+    fearGreed: {
+      title: "CNN Fear & Greed Index",
+      description: "Track the CNN Fear & Greed Index and its seven underlying market indicators.",
+      heading: "CNN Fear & Greed Index",
+      subheading: "A snapshot of market sentiment, from Extreme Fear to Extreme Greed, based on seven indicators.",
+      loading: "Loading Fear & Greed Index...",
+      error: "Failed to load the Fear & Greed Index.",
+      now: "Now",
+      lastUpdated: "Last updated",
+      dataSource: "Data source",
+      cnn: "CNN Business",
+      compare: {
+        previousClose: "Previous Close",
+        week: "1 Week Ago",
+        month: "1 Month Ago",
+        year: "1 Year Ago"
+      },
+      charts: {
+        history: "Fear & Greed Index — Past Year",
+        components: "Underlying Indicators"
+      },
+      components: {
+        market_momentum_sp500: "Market Momentum (S&P 500)",
+        market_momentum_sp125: "S&P 500 (125-day avg)",
+        stock_price_strength: "Stock Price Strength",
+        stock_price_breadth: "Stock Price Breadth",
+        put_call_options: "Put/Call Options",
+        market_volatility_vix: "Market Volatility (VIX)",
+        market_volatility_vix_50: "VIX (50-day avg)",
+        junk_bond_demand: "Junk Bond Demand",
+        safe_haven_demand: "Safe Haven Demand"
+      },
+      ratings: {
+        "extreme fear": "Extreme Fear",
+        fear: "Fear",
+        neutral: "Neutral",
+        greed: "Greed",
+        "extreme greed": "Extreme Greed"
+      }
     }
   },
   zh: {
@@ -196,7 +238,8 @@ export const translations = {
       contact: "联系我们",
       qdii: "基金额度",
       mega7: "Mega 7+ 股票",
-      macro: "宏观"
+      macro: "宏观",
+      fearGreed: "恐慌贪婪指数"
     },
     // Index Pages
     index: {
@@ -366,6 +409,47 @@ export const translations = {
         spread: "利差 (个百分点)",
         index: "指数",
         date: "日期"
+      }
+    },
+    // CNN Fear & Greed Page
+    fearGreed: {
+      title: "CNN 恐慌与贪婪指数",
+      description: "追踪 CNN 恐慌与贪婪指数及其七项基础市场指标。",
+      heading: "CNN 恐慌与贪婪指数",
+      subheading: "基于七项指标反映市场情绪，从极度恐慌到极度贪婪。",
+      loading: "正在加载恐慌与贪婪指数...",
+      error: "加载恐慌与贪婪指数失败。",
+      now: "当前",
+      lastUpdated: "最近更新",
+      dataSource: "数据来源",
+      cnn: "CNN Business",
+      compare: {
+        previousClose: "上一交易日收盘",
+        week: "一周前",
+        month: "一个月前",
+        year: "一年前"
+      },
+      charts: {
+        history: "恐慌与贪婪指数 — 过去一年",
+        components: "基础指标"
+      },
+      components: {
+        market_momentum_sp500: "市场动能（标普500）",
+        market_momentum_sp125: "标普500（125日均线）",
+        stock_price_strength: "股价强度",
+        stock_price_breadth: "股价广度",
+        put_call_options: "看跌/看涨期权",
+        market_volatility_vix: "市场波动率（VIX）",
+        market_volatility_vix_50: "VIX（50日均线）",
+        junk_bond_demand: "垃圾债需求",
+        safe_haven_demand: "避险资产需求"
+      },
+      ratings: {
+        "extreme fear": "极度恐慌",
+        fear: "恐慌",
+        neutral: "中性",
+        greed: "贪婪",
+        "extreme greed": "极度贪婪"
       }
     }
   }
